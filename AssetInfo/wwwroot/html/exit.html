@@ -1,0 +1,33 @@
+﻿<div class="page text-center mg-t-50">
+  <h3>确定要退出系统吗?</h3>
+  <p>退出系统,请点击"退出".</p>
+  <div>
+    <span class="btn danger" id="logoutBtn">退出</span>
+    <p class="text-danger text-lg mg-tb-10" id="errinfobox"></p>
+  </div>
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let page = win.ns.page;
+    let token = win.ns.token;
+    let router = win.ns.router;
+
+    $('#logoutBtn').click(thisBtn => {
+      exit(thisBtn);
+    });
+    //
+    function exit(thisobj) {
+      // 清除token即可
+      token.del();
+      $('#errinfobox').html('已退出系统,请重新登录.3秒后跳转登录页面...');
+      setTimeout(() => {
+        $('#errinfobox').html('');
+        router.goto('/html/login.html');
+      }, 3000)
+    }
+  })(window);
+</script>

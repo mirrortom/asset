@@ -1,0 +1,18 @@
+﻿<div class="page">
+  <p class="article-title info">新增</p>
+  <div class="grids" id="keyvalform">
+    <label class="input-label bg-gray text-center grid-1">种类名称</label>
+    <input class="input-text grid-2" name="title" type="text" value="" placeholder="请输入资产种类名" vtype="notnull|maxlen" verrmsg="必填项|不超过50个字符" maxlength="50">
+    <br />
+    <label class="input-label bg-gray text-center grid-1">说明</label>
+    <input class="input-text grid-3" name="comment" type="text" value="" placeholder="请输入资产种类说明" vtype="notnull|maxlen" verrmsg="必填项|不超过50个字符" maxlength="50">
+    <input id="keyvalCtgy" type="hidden" name="category" value="2" />
+    <div class="grid-4">
+      <a class="btn info mg-l-10" id="keyvaladdBtn">提交</a>
+      <strong class="mg-l-20"><span class="text-danger" id="errinfobox"></span></strong>
+    </div>
+  </div>
+  <p class="article-title warning">搜索</p>
+  <div id="keyvallist"></div>
+</div>
+<script src="/js/keyval.js"></script>

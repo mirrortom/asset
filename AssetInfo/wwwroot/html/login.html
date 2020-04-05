@@ -1,0 +1,66 @@
+﻿<div class="page mg-t-50">
+  <div class="panel" style="width:320px;margin:0 auto">
+    <div class="panel-head bg-gray">
+      <h3>资产系统登录</h3>
+    </div>
+    <div class="panel-body">
+      <label class="input-label">密码</label>
+      <input class="input-text" id="login_pwd" name="pwd" type="password" value="" placeholder="请输入密码" vtype="notnull|minlen" verrmsg="必填项|至少4个字符" minlength="4">
+      <a class="btn block gray mg-tb-10" id="loginBtn">登录</a>
+      <p class="text-danger text-center text-lg mg-tb-10" id="errbox"></p>
+    </div>
+  </div>
+
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let page = win.ns.page;
+    let token = win.ns.token;
+    let router = win.ns.router;
+
+    // login Btn
+    $('#loginBtn').click(thisBtn => {
+      login(thisBtn);
+    });
+    // 按回车登录
+    $('#login_pwd')[0].onkeyup = () => {
+      if (window.event.keyCode == 13) {
+        $('#loginBtn').click();
+      }
+    }
+    function login(thisobj) {
+      $('#errbox').html('');
+      $.formClear($('#login_pwd')[0])
+      if (!$.formCheck($('#login_pwd')[0]))
+        return;
+      $ui.isBtnLoading(thisobj);
+      // 发登录
+      let para = { pwd: btoa($('#login_pwd').val()) };
+      $.post(cfg.ApiLogin, para)
+        .then((data) => {
+          if (data.errcode == 200) {
+            // accessToken 设置
+            token.newToken(data.token);
+
+            $('#login_pwd').val('')
+            $('#errbox').html('登录成功!');
+            setTimeout(() => {
+              $('#errinfobox').html('');
+              router.goto('/html/index.html');
+            }, 3000)
+          } else {
+            $('#errbox').html(data.errmsg);
+          }
+          $ui.clsBtnLoading(thisobj, 1000);
+        })
+        .catch((err) => {
+          $('#errbox').html('服务器异常!');
+          $ui.clsBtnLoading(thisobj, 1000);
+        })
+    }
+  })(window);
+</script>

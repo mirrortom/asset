@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang=en xmlns=http://www.w3.org/1999/xhtml>
+<head>
+  <meta charset=utf-8 />
+  <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1" />
+  <meta name=viewport content="width=device-width,initial-scale=1.0" />
+  <link href="http://localhost/mirrorui/mirrorui.css" rel="stylesheet" />
+  <script src="http://localhost/mirrorui/mirrorui.js"></script>
+  <title>资产信息</title>
+  <style>
+    .mainpage {
+      display: grid;
+      grid-template-columns: 200px auto;
+    }
+
+    .menu-box {
+      position: sticky;
+      top: 0;
+      width: 94%;
+      max-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .tabsmenu-box {
+      position: sticky;
+      top: 0;
+      width: 94%;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="mainpage">
+    <div class="menu-box panel">
+      <div class="panel-head bg-gray">
+        <h4>💰 资产管理</h4>
+      </div>
+      <div class="panel-body">
+        <div id="main_menubox">
+          <p class="article-title">统计</p>
+          <a class="btn link block" url="/html/index.html">💯 首页</a>
+          <p class="article-title">资产维护</p>
+          <a class="btn link block" url="/html/list.html">📆 资产列表</a>
+          <a class="btn link block" url="/html/history.html">⌛ 资产历史</a>
+          <a class="btn link block" url="/html/add.html">➕ 新增资产</a>
+          <p class="article-title">基础数据</p>
+          <a class="btn link block" url="/html/keyval2.html">🍩 资产种类</a>
+          <a class="btn link block" url="/html/keyval1.html">🏗 资产机构</a>
+          <a class="btn link block" url="/html/keyval3.html">🍍 资产状态</a>
+          <a class="btn link block" url="/html/keyval4.html">🌾 风险等级</a>
+          <p class="article-title">系统</p>
+          <a class="btn link block" url="/html/login.html" id="loginMenu">🔐 登录</a>
+          <a class="btn link block" url="/html/exit.html">📲 退出</a>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="tabsmenu-box">
+        <div class="" id="cachepage_nav"></div>
+      </div>
+      <div class="pd-15" id="cachepage_cont">
+      </div>
+    </div>
+  </div>
+  <script src="http://localhost/jslib/jslib.js"></script>
+  <script src="/js/globle.js"></script>
+  <script>
+    ((win) => {
+      // help
+      let token = win.ns.token;
+      let router = win.ns.router;
+
+      //=========================
+      // 主菜单路由实现
+      //=========================
+      // 所有url装载,url为键,值是对应菜单dom
+      router.urls = {};
+      $('#main_menubox .btn').each((item, i) => {
+        let url = $(item).prop('url');
+        if (url)
+          router.urls[url] = item;
+      });
+      /**
+       * 路由跳转
+       * @param {string} url 菜单url
+       * @param {any} para 页面传递参数.默认null
+       */
+      router.goto = (url, para = null) => {
+        let menu = router.urls[url];
+        // 找到菜单dom,触发click.如果没有找到,异常
+        if (menu) {
+          router.para = para;
+          menu.click();
+        }
+        else
+          throw new Error('无效的url: ' + url);
+      }
+
+      //=========================
+      // 主菜单生成,绑定点击事件
+      //=========================
+      // 新建cachePage实例,tabsDom:选项卡容器DOM,contDom:显示内容的容器DOM
+      let cpg = cachepage($('#cachepage_nav')[0], $('#cachepage_cont')[0]);
+      // 菜单
+      $('#main_menubox .btn').each((item, i) => {
+        item.onclick = () => {
+          let menuId = '_'+i;
+          let url = $(item).prop('url');
+          router.url = url;// 点击菜单时,设置当前路径到公用变量
+          cpg.load(menuId, item.innerText, (loadType) => {
+            if (loadType == 3) {
+              $.get(url)
+                .then((html) => {
+                  $('#cachepage_cont').html(html);
+                });
+            }
+          });
+        }
+      });
+      // 无token时打开登录页面,否则打开"首页"
+      if (token.check() == false)
+        $('#loginMenu')[0].click();
+      else
+        $('#main_menubox .btn').eq(0).click();
+    })(window);
+  </script>
+</body>
+</html>

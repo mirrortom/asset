@@ -1,0 +1,235 @@
+﻿<div class="page" id="addassetform">
+  <input type="hidden" name="Id" value="" id="assetId" />
+  <input type="hidden" name="ItemCode" value="" />
+  <p class="article-title info">资产信息</p>
+  <div class="grids mg-tb-5">
+    <label class="input-label text-center bg-gray grid-1">资产名称</label>
+    <input class="input-text grid-3" name="Title" type="text" vtype="notnull|maxlen" maxlength="50" verrmsg="必填项|不超过50个字符" />
+    <label class="input-label text-center bg-gray grid-1">发行代码</label>
+    <input class="input-text grid-2" name="Code" type="text" vtype="notnull|maxlen" maxlength="50" verrmsg="必填项|不超过50个字符" />
+    <label class="input-label text-center bg-gray grid-1">版本说明</label>
+    <input class="input-text grid-3" name="Remark" type="text" vtype="notnull|maxlen" maxlength="50" verrmsg="必填项|不超过50个字符" />
+  </div>
+  <div class="grids mg-tb-5">
+    <label class="input-label text-center bg-gray grid-1">资产种类</label>
+    <select class="select grid-2" id="kind2" name="Kind" vtype="notnull" verrmsg="必填项"></select>
+    <label class="input-label text-center bg-gray grid-1">风险等级</label>
+    <select class="select grid-2" id="risk4" name="Risk" vtype="notnull" verrmsg="必填项"></select>
+    <label class="input-label text-center bg-gray grid-1">购买机构</label>
+    <select class="select grid-2" id="excorg1" name="ExcOrg" vtype="notnull" verrmsg="必填项"></select>
+    <label class="input-label text-center bg-gray grid-1">状态</label>
+    <select class="select grid-2" id="status3" name="Status" vtype="notnull" verrmsg="必填项"></select>
+  </div>
+  <p class="article-title warning">市值 / 利率</p>
+  <div class="grids mg-tb-5">
+    <label class="input-label text-center bg-gray grid-1">成本</label>
+    <input class="input-text grid-2" name="Amount" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">市值</label>
+    <input class="input-text grid-2" name="Value" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">浮盈</label>
+    <input class="input-text grid-2" name="Profit" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">手续费</label>
+    <input class="input-text grid-2" name="Charge" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+  </div>
+  <div class="grids mg-tb-5">
+    <label class="input-label text-center bg-gray grid-1">购买日</label>
+    <input class="input-text grid-2" name="BuyDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
+    <label class="input-label text-center bg-gray grid-1">起息日</label>
+    <input class="input-text grid-2" name="ValueDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
+    <label class="input-label text-center bg-gray grid-1">到期日</label>
+    <input class="input-text grid-2" name="ExpDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
+  </div>
+  <div class="grids mg-tb-5">
+    <label class="input-label text-center bg-gray grid-1">参考年利率</label>
+    <input class="input-text grid-2" name="Rate" type="text" vtype="notnull|money" verrmsg="必填项|利率值无效" />
+    <label class="input-label text-center bg-gray grid-1">计息天数</label>
+    <input class="input-text grid-2" name="Term" type="text" vtype="notnull|123" verrmsg="必填项|限数字" />
+  </div>
+  <hr class="line" />
+  <p class="text-success" id="editinfo"></p>
+  <div class="grids-3">
+    <a class="btn lg success" id="addAssetBtn">提交</a>
+    <i></i>
+    <a class="btn lg" id="resetFormBtn">重置</a>
+  </div>
+  <p class="text-danger text-lg mg-tb-10" id="errinfobox"></p>
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let page = win.ns.page;
+    let token = win.ns.token;
+    let router = win.ns.router;
+
+    //===========
+    // page init
+    //===========
+    // 去掉上次的提示语
+    $('#errinfobox').html('');
+    // 下拉框数据
+    createOptions('excorg1', 1);
+    createOptions('kind2', 2);
+    createOptions('status3', 3);
+    createOptions('risk4', 4);
+    // 绑定提交按钮
+    $('#addAssetBtn').click(thisBtn => {
+      add(thisBtn);
+    });
+    // 绑定重置
+    $('#resetFormBtn').click(thisBtn => {
+      resetForm();
+    });
+    // list页面跳过来编辑,使用数据填充表单
+    if (router.para && router.para.op == 'edit' && router.para.assetid) {
+      $('#assetId').val(router.para.assetid);
+      // 编辑时请求数据,如果出错,尝试20次
+      initEditData();
+      router.para = null;
+    } else {
+      // 页面默认操作是新增
+      if ($.isEmptyOrNull($('#assetId').val())) {
+        resetForm();
+
+      }
+    }
+    //===========
+    // function
+    //===========
+    /**
+     * 由list页面跳过来编辑时,需要请求数据填充表单.
+     * @param {number} maxCount 最多请求次数
+     */
+    function initEditData(maxCount = 20) {
+      // 下拉框数据填充后,才请求
+      if (!$('#excorg1 option').length || !$('#kind2 option').length
+        || !$('#status3 option').length || !$('#risk4 option').length) {
+        if (maxCount <= 0) return;
+        setTimeout(() => { initEditData(maxCount - 1) }, 500);
+        return;
+      }
+      post(cfg.ApiAssetItem, { id: $('#assetId').val() })
+        .then(data => {
+          if (data.errcode == 200) {
+            let item = data.item;
+            // 填充表单
+            $('#addassetform input[name]').each(o => {
+              o.value = item[o.name];
+            })
+            $('#excorg1 option[value="' + item.ExcOrg + '"]')[0].selected = 'selected';
+            $('#kind2 option[value="' + item.Kind + '"]')[0].selected = 'selected';
+            $('#status3 option[value="' + item.Status + '"]')[0].selected = 'selected';
+            $('#risk4 option[value="' + item.Risk + '"]')[0].selected = 'selected';
+            // 提示更新状态
+            $('#editinfo').text('🖍 更新资产: ' + item.Title);
+          } else if (data.errmsg) {
+            $('#errinfobox').html(data.errmsg);
+          } else
+            throw new Error(data);
+        })
+        .catch(err => {
+          $('#errinfobox').html(err.message);
+        });
+    }
+    /**
+     * 下拉框填充数据
+     * @param {string} selectId select元素Id
+     * @param {number} dataCategory 下拉框数据分组类型
+     */
+    function createOptions(selectId, dataCategory) {
+      if ($('#' + selectId).find('option').length) {
+        return;
+      }
+      post(cfg.ApiKVList, { category: dataCategory })
+        .then(data => {
+          if (data.errcode == 200) {
+            let ops = '<option value="">请选择...</option>';
+            for (var i = 0, len = data.list.length; i < len; i++) {
+              let item = data.list[i];
+              if (item.Enabled == 0)
+                continue;
+              let op = `<option value="${item.Code}" title="${item.Comment}">${item.Title}</option>`;
+              ops += op;
+            }
+            $('#' + selectId).html(ops);
+          } else if (data.errmsg) {
+            $('#errinfobox').html(data.errmsg);
+          } else
+            throw new Error(data);
+        })
+        .catch(err => {
+          $('#errinfobox').html(err.message);
+        });
+    }
+
+    /**
+     * 添加按钮
+     * @param thisobj 按钮对象
+     */
+    function add(thisobj) {
+      // 验证
+      // valdate
+      let inputs = $('#addassetform').find('input[name],select[name]');
+      for (var i = 0, len = inputs.length; i < len; i++) {
+        if (!$.formCheck(inputs[i]))
+          return;
+      }
+      $ui.isBtnLoading(thisobj);
+      //
+      let para = $.formJson($('#addassetform')[0]);
+      post(cfg.ApiAssetAdd, para)
+        .then(data => {
+          if (data.errcode == 200) {
+            $('#errinfobox').html('服务器返回成功!');
+            // 成功后重置表单
+            resetForm();
+
+          } else if (data.errmsg) {
+            $('#errinfobox').html(data.errmsg);
+          } else
+            throw new Error(data);
+          $ui.clsBtnLoading(thisobj, 500);
+        })
+        .catch(err => {
+          $('#errinfobox').html(err.message);
+          $ui.clsBtnLoading(thisobj, 500);
+        });
+    }
+
+    /**
+     * 重置表单数据
+     */
+    function resetForm() {
+      let today = $.datefmt(new Date(), 'yyyy/MM/dd');
+      let def = {
+        Id: '',
+        ItemCode: '',
+        Title: '',
+        Code: '',
+        Remark: '无',
+        Kind: '',
+        Risk: '',
+        ExcOrg: '',
+        Status: '',
+        Amount: '0',
+        Value: '0',
+        Profit: '0',
+        Charge: '0',
+        BuyDate: today,
+        ValueDate: today,
+        ExpDate: '2100/01/01',
+        Rate: '0',
+        Term: '0'
+      };
+      $('#addassetform input[name]').each(item => {
+        item.value = def[item.name];
+      })
+      $('#addassetform select[name]').each(item => {
+        item.selectedIndex = 0;
+      })
+      $('#editinfo').text('🌻 新增资产: ');
+    }
+  })(window);
+</script>

@@ -1,0 +1,91 @@
+﻿<div class="page">
+  <p class="article-title warning">搜索</p>
+  <div id="assetlist"></div>
+  <hr class="line"/>
+  <p class="text-center">到底了</p>
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let router = win.ns.router;
+
+    //===========
+    // page init
+    //===========
+    list();
+
+    //===========
+    // function
+    //===========
+    // table data
+    function list() {
+      post(cfg.ApiAssetList, {})
+        .then(data => {
+          if (data.errcode == 200) {
+            createTable(data.list);
+          } else if (data.errmsg) {
+            $('#assetlist').html(`<p class="text-warning">${data.errmsg}</p>`);
+          } else
+            throw new Error(data);
+        })
+        .catch(err => {
+          $('#assetlist').html(`<p class="text-danger">${err.message}</p>`);
+        });
+    }
+    function createTable(data) {
+      let span = (txt, cls, isBlock = true) => {
+        return `<span class="${cls || ''} ${isBlock == true ? "d-block" : ""}">${txt}</span>`;
+      };
+      // tab header
+      let th = '';
+      th += `<tr><th>市值 / 名称${span('代码')}</th><th>成本${span('浮盈')}</th><th>风险</th>`;
+      th += `<th>${span('利率 / 费用')}期限(天)</th>`;
+      th += `<th>${span('更新日')}购买日</th>`;
+      th += `<th>${span('起息日')}到期日</th>`;
+      th += `<th>种类${span('机构')}</th><th>状态</th><th>备注</th></th>`;
+      th += `<th>功能</td></tr >`;
+      // rows
+      let rows = '';
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        let cols = `<td>${span('￥' + item.Value, 'text-danger')} ${span(item.Title)} ${span(item.Code)}</td>`;
+        cols += `<td>${span(item.Amount)}${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        cols += `<td>${item.Risk}</td>`;
+        // 利率 费用 期限
+        cols += `<td>${span(item.Rate + '%')}${span(item.Charge)}${span(item.Term == 0 ? '—' : item.Term)}</td>`;
+        // 更新/购买 日期
+        cols += `<td>${span(item.Ctime, 'text-danger')}${span(item.Buydate, 'text-grayse')}</td>`;
+        cols += `<td>${span(item.Valuedate.substr(0, 10))}${span(item.Expdate.indexOf('2100') >= 0 ? '—' : item.Expdate.substr(0, 10))}</td>`;
+        cols += `<td>${span(item.Kind)}${span(item.ExcOrg)}</td>`;
+        cols += `<td>${item.Status}</td><td><span class="d-block text-overflow" style="width:80px">${item.Remark}</span></td>`;
+        cols += `<td><a class="btn info sm update-btns" assetid="${item.Id}" >更新</a>`;
+        cols += `<a class="btn success sm history-btns" assetid="${item.Id}" >历史</a></td >`;
+        //
+        rows += `<tr>${cols}</tr>`;
+      }
+      let table = `<table class="table">${th}${rows}</table>`;
+      $('#assetlist').empty().html(table);
+      //
+      opBind();
+    }
+    // 操作事件绑定
+    function opBind() {
+      // 更新,跳到资产添加页面
+      $('#assetlist .update-btns').each(item => {
+        item.onclick = () => {
+          router.goto('/html/add.html', { op: 'edit', assetid: $(item).prop('assetid') });
+        };
+      });
+      // 更新,跳到资产历史页面
+      $('#assetlist .history-btns').each(item => {
+        item.onclick = () => {
+          router.goto('/html/history.html', { op: 'queryhistory', assetid: $(item).prop('assetid') });
+        };
+      });
+    }
+
+  })(window);
+</script>

@@ -1,0 +1,126 @@
+﻿<div class="page">
+  <p class="article-title warning">搜索</p>
+  <div id="assetitems"></div>
+  <hr class="line" />
+  <div id="historylist"></div>
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let router = win.ns.router;
+
+    //===========
+    // page init
+    //===========
+    assetTitleList();
+    // list页面跳过来时,显示指定资产的历史列表
+    if (router.para && router.para.op == 'queryhistory' && router.para.assetid) {
+      let assetid = router.para.assetid;
+      list(assetid);
+      router.para = null;
+    }
+    //===========
+    // function
+    //===========
+    // 资产标题列表
+    function assetTitleList() {
+      post(cfg.ApiAssetList, { fields: 'id,title' })
+        .then(data => {
+          if (data.errcode == 200) {
+            createTitles(data.list);
+          } else if (data.errmsg) {
+            $('#assetitems').html(`<p class="text-warning">${data.errmsg}</p>`);
+          } else
+            throw new Error(data);
+        })
+        .catch(err => {
+          $('#assetitems').html(`<p class="text-danger">${err.message}</p>`);
+        });
+    }
+    function createTitles(data) {
+      let html = '';
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        html += `<a class="btn sm mg-5" assetid="${item.Id}">${item.Title}</a>`;
+      }
+      $('#assetitems').html(html);
+      // 绑定点击事件
+      $('#assetitems a[assetid]').each((item) => {
+        item.onclick = () => {
+          let id = $(item).prop('assetid');
+          list(id);
+        }
+      })
+    }
+    /**
+     * 资产历史table data
+     * @param {string} id 资产id
+     */
+    function list(id) {
+      post(cfg.ApiAssetHistory, { id: id })
+        .then(data => {
+          if (data.errcode == 200) {
+            createTable(data.list);
+          } else if (data.errmsg) {
+            $('#historylist').html(`<p class="text-warning">${data.errmsg}</p>`);
+          } else
+            throw new Error(data);
+        })
+        .catch(err => {
+          $('#historylist').html(`<p class="text-danger">${err.message}</p>`);
+        });
+    }
+    function createTable(data) {
+      let span = (txt, cls, isBlock = true) => {
+        return `<span class="${cls} ${isBlock == true ? "d-block" : ""}">${txt}</span>`;
+      };
+      // tab header
+      let th = '';
+      th += `<tr><th>市值 / 名称${span('代码')}</th><th>成本${span('浮盈')}</th><th>风险</th>`;
+      th += `<th>${span('利率 / 费用')}期限(天)</th>`;
+      th += `<th>${span('更新日')}购买日</th>`;
+      th += `<th>${span('起息日')}到期日</th>`;
+      th += `<th>种类${span('机构')}</th><th>状态</th><th>备注</th></th>`;
+      th += `<th>功能</td></tr >`;
+      // rows
+      let rows = '';
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        let cols = `<td>${span('￥' + item.Value, 'text-danger')} ${span(item.Title)} ${span(item.Code)}</td>`;
+        cols += `<td>${span(item.Amount)}${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        cols += `<td>${item.Risk}</td>`;
+        // 利率 费用 期限
+        cols += `<td>${span(item.Rate + '%')}${span(item.Charge)}${span(item.Term == 0 ? '—' : item.Term)}</td>`;
+        // 更新/购买 日期
+        cols += `<td>${span(item.Ctime, 'text-danger')}${span(item.Buydate, 'text-grayse')}</td>`;
+        cols += `<td>${span(item.Valuedate.substr(0, 10))}${span(item.Expdate.indexOf('2100') >= 0 ? '—' : item.Expdate.substr(0, 10))}</td>`;
+        cols += `<td>${span(item.Kind)}${span(item.ExcOrg)}</td>`;
+        cols += `<td>${item.Status}</td><td><span class="d-block text-overflow" style="width:80px">${item.Remark}</span></td>`;
+        // on off
+        let ischecked = item.Enabled == 1 ? "checked" : '';
+        let onoff = `<input class="onoff-check" id="${item.Id}" type="checkbox" ${ischecked}/><label class="onoff-label" for="${item.Id}" ></label>`;
+        cols += `<td>${onoff}</td >`;
+        //
+        rows += `<tr>${cols}</tr>`;
+      }
+      let table = `<table class="table">${th}${rows}</table>`;
+      $('#historylist').empty().html(table);
+      //
+      opBind();
+    }
+    // 操作事件绑定
+    function opBind() {
+      // on off事件
+      $('#historylist .onoff-label').each(item => {
+        item.onclick = () => {
+          let ischeck = $(item).prev()[0].checked;
+          post(cfg.ApiKVOnOff, { tableid: 'asset', colid: $(item).prop('for'), onoff: ischeck ? 0 : 1 });
+        };
+      });
+    }
+
+  })(window);
+</script>
