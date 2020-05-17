@@ -22,28 +22,24 @@
   </div>
   <p class="article-title warning">市值 / 利率</p>
   <div class="grids mg-tb-5">
-    <label class="input-label text-center bg-gray grid-1">成本</label>
-    <input class="input-text grid-2" name="Amount" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">市值</label>
-    <input class="input-text grid-2" name="Value" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <input class="input-text grid-1" name="Value" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">持仓</label>
+    <input class="input-text grid-1" name="Positions" type="text" vtype="notnull|int" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">浮盈</label>
-    <input class="input-text grid-2" name="Profit" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
-    <label class="input-label text-center bg-gray grid-1">手续费</label>
-    <input class="input-text grid-2" name="Charge" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
-  </div>
-  <div class="grids mg-tb-5">
-    <label class="input-label text-center bg-gray grid-1">购买日</label>
-    <input class="input-text grid-2" name="BuyDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
-    <label class="input-label text-center bg-gray grid-1">起息日</label>
-    <input class="input-text grid-2" name="ValueDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
-    <label class="input-label text-center bg-gray grid-1">到期日</label>
-    <input class="input-text grid-2" name="ExpDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
+    <input class="input-text grid-1" name="Profit" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">现价</label>
+    <input class="input-text grid-1" name="Price" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
+    <label class="input-label text-center bg-gray grid-1">成本</label>
+    <input class="input-text grid-1" name="Amount" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
   </div>
   <div class="grids mg-tb-5">
     <label class="input-label text-center bg-gray grid-1">参考年利率</label>
     <input class="input-text grid-2" name="Rate" type="text" vtype="notnull|money" verrmsg="必填项|利率值无效" />
-    <label class="input-label text-center bg-gray grid-1">计息天数</label>
-    <input class="input-text grid-2" name="Term" type="text" vtype="notnull|123" verrmsg="必填项|限数字" />
+    <label class="input-label text-center bg-gray grid-1">起息日</label>
+    <input class="input-text grid-2" name="ValueDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
+    <label class="input-label text-center bg-gray grid-1">到期日</label>
+    <input class="input-text grid-2" name="ExpDate" onclick="MyDatePick()" type="text" vtype="notnull|date" verrmsg="必填项|日期无效" />
   </div>
   <hr class="line" />
   <p class="text-success" id="editinfo"></p>
@@ -209,6 +205,8 @@
         Title: '',
         Code: '',
         Remark: '无',
+        Positions: '0',
+        Price:'0',
         Kind: '',
         Risk: '',
         ExcOrg: '',
@@ -217,11 +215,9 @@
         Value: '0',
         Profit: '0',
         Charge: '0',
-        BuyDate: today,
         ValueDate: today,
         ExpDate: '2100/01/01',
         Rate: '0',
-        Term: '0'
       };
       $('#addassetform input[name]').each(item => {
         item.value = def[item.name];

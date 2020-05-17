@@ -32,14 +32,16 @@
             let onoff = `<input class="onoff-check" id="${item.Code}" type="checkbox" ${ischecked}/><label class="onoff-label" for="${item.Code}" ></label>`;
             let cols = `<td>${item.Code}</td><td>${item.Title}</td><td>${item.Comment}</td>`;
             cols += `<td>${onoff}<span class="btn sm info mg-lr-5" act="up" kvcode="${item.Code}">↑</span>`;
-            cols += `<span class="btn sm success" act="down" kvcode="${item.Code}">↓</span></td >`;
+            cols += `<span class="btn sm success" act="down" kvcode="${item.Code}">↓</span>`;
+            cols += ` <a class="btn info sm update-btns" kvcode="${item.Code}" >更新</a></td>`;
             rows += `<tr kvcode="${item.Code}">${cols}</tr>`;
         }
-        let table = `<table class="table">${th}${rows}</table>`;
+        let table = `<table class="table hover">${th}${rows}</table>`;
         $('#keyvallist').empty().html(table);
         //
         opBind();
     }
+
     // 操作事件绑定
     function opBind() {
         // on off事件
@@ -58,7 +60,13 @@
             let kvcode = $(item).prop('kvcode');
             orderby(kvcode, 1);
         });
+        // 更新
+        $('#keyvallist .update-btns').click(item => {
+            let kvcode = $(item).prop('kvcode');
+            update(kvcode);
+        });
     }
+
     // 排序操作 kvcode:要重新排序的kvcode,dir:0=向前,1=向后
     function orderby(kvcode, dir) {
         // 当前排序顺序
@@ -93,6 +101,7 @@
                 msgbox.alert(err.message);
             });
     }
+
     // 增加
     $('#keyvaladdBtn').click(thisBtn => {
         add(thisBtn);
@@ -124,6 +133,26 @@
             .catch(err => {
                 $('#errinfobox').html(err.message);
                 $ui.clsBtnLoading(thisobj, 500);
+            });
+    }
+
+    // 修改
+    function update(code) {
+        // 获取数据,填写在新增表单
+        post(cfg.ApiKVItem, { code: code })
+            .then(data => {
+                if (data.errcode == 200) {
+                    // 填充表单
+                    $('#keyvalform input[name]').each(o => {
+                        o.value = data.item[o.name];
+                    });
+                } else if (data.errmsg) {
+                    $('#errinfobox').html('更新出错: '+data.errmsg);
+                } else
+                    throw new Error(data);
+            })
+            .catch(err => {
+                $('#errinfobox').html('更新发生异常: '+err.message);
             });
     }
 })(window);

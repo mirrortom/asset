@@ -25,9 +25,9 @@
     //===========
     // function
     //===========
-    // 资产标题列表
+    // 资产标题列表 (用于搜索区域)
     function assetTitleList() {
-      post(cfg.ApiAssetList, { fields: 'id,title' })
+      post(cfg.ApiAssetTitles, { })
         .then(data => {
           if (data.errcode == 200) {
             createTitles(data.list);
@@ -79,9 +79,8 @@
       };
       // tab header
       let th = '';
-      th += `<tr><th>市值 / 名称${span('代码')}</th><th>成本${span('浮盈')}</th><th>风险</th>`;
-      th += `<th>${span('利率 / 费用')}期限(天)</th>`;
-      th += `<th>${span('更新日')}购买日</th>`;
+      th += `<tr><th>名称${span('代码')}</th><th>市值${span('盈亏')}</th><th>现价${span('成本')}</th><th>持仓</th>`;
+      th += `<th>风险</th><th>更新时间</th><th>年息%</th>`;
       th += `<th>${span('起息日')}到期日</th>`;
       th += `<th>种类${span('机构')}</th><th>状态</th><th>备注</th></th>`;
       th += `<th>功能</td></tr >`;
@@ -89,13 +88,14 @@
       let rows = '';
       for (var i = 0, len = data.length; i < len; i++) {
         let item = data[i];
-        let cols = `<td>${span('￥' + item.Value, 'text-danger')} ${span(item.Title)} ${span(item.Code)}</td>`;
-        cols += `<td>${span(item.Amount)}${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        let cols = `<td>${span(item.Title)} ${span(item.Code)}</td>`;
+        cols += `<td>${span(item.Value, 'text-danger')} ${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        cols += `<td>${span(item.Price)}${span(item.Amount)}</td>`;
+        cols += `<td>${item.Positions}</td>`;
         cols += `<td>${item.Risk}</td>`;
-        // 利率 费用 期限
-        cols += `<td>${span(item.Rate + '%')}${span(item.Charge)}${span(item.Term == 0 ? '—' : item.Term)}</td>`;
-        // 更新/购买 日期
-        cols += `<td>${span(item.Ctime, 'text-danger')}${span(item.Buydate, 'text-grayse')}</td>`;
+        // 更新时间 利率 
+        cols += `<td>${span(item.Ctime, 'text-danger')}</td><td>${span(item.Rate + '%')}</td>`;
+        // 起息日 / 到期日
         cols += `<td>${span(item.Valuedate.substr(0, 10))}${span(item.Expdate.indexOf('2100') >= 0 ? '—' : item.Expdate.substr(0, 10))}</td>`;
         cols += `<td>${span(item.Kind)}${span(item.ExcOrg)}</td>`;
         cols += `<td>${item.Status}</td><td><span class="d-block text-overflow" style="width:80px">${item.Remark}</span></td>`;

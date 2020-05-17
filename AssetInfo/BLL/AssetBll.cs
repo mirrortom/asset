@@ -42,6 +42,7 @@ namespace AssetInfo.BLL
             }
             return data.ToList();
         }
+
         /// <summary>
         /// 查找一个资产的所有更新记录.根据资产id
         /// </summary>
@@ -61,12 +62,35 @@ namespace AssetInfo.BLL
                 return new List<AssetM>();
             }
             string sql = $@"
-SELECT id,title,code,amount,value,charge,remark,profit,risk,excorg,kind,buydate,valuedate,expdate,rate,term,status,a.ctime,itemCode,CASE WHEN d.ctime IS NULL THEN 1 ELSE 0 END [enabled]
+SELECT id,title,code,amount,positions,price,value,remark,profit,risk,excorg,kind,valuedate,expdate,rate,status,a.ctime,itemCode,CASE WHEN d.ctime IS NULL THEN 1 ELSE 0 END [enabled]
 FROM Asset a
 LEFT JOIN disabled d
 ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
 WHERE a.itemCode=@itemCode
 ORDER BY a.ctime DESC";
+            SQLServer db = new SQLServer();
+            AssetM[] data = db.ExecuteQuery<AssetM, AssetM>(sql, para);
+            if (data == null)
+            {
+                para.ErrorMsg = AlertMsg.没有数据.ToString();
+                return new List<AssetM>();
+            }
+            return data.ToList();
+        }
+
+        /// <summary>
+        /// 返回所有资产的标题.按资产itemcode分组,返回title,id(其中一个记录的id)
+        /// </summary>
+        /// <param name="para"></param>
+        /// <returns></returns>
+        public static List<AssetM> HistoryTitles(AssetM para)
+        {
+            string sql = $@"
+SELECT a.title,a.id FROM
+(
+	SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
+	FROM {Table.asset.ToString()}) a
+WHERE a.rn=1";
             SQLServer db = new SQLServer();
             AssetM[] data = db.ExecuteQuery<AssetM, AssetM>(sql, para);
             if (data == null)
@@ -99,7 +123,7 @@ ORDER BY a.ctime DESC";
             para.Id = RandHelp.NewGuid();
             para.Ctime = DateTime.Now;
             //
-            string sql = "insert into Asset(id,title,code,amount,value,charge,risk,remark,profit,excorg,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode)";
+            string sql = "insert into Asset(id,title,code,amount,value,positions,price,risk,remark,profit,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode)";
             SQLServer db = new SQLServer();
             int re = db.Insert<AssetM>(sql, para);
             if (re == 1)
@@ -161,7 +185,7 @@ ORDER BY a.ctime DESC";
         public static AssetM ValueTotal()
         {
             string sql = $@"
-SELECT SUM(amount) amount,SUM(value) value,SUM(charge) charge,SUM(profit) profit
+SELECT SUM(value) value,SUM(profit) profit
 FROM(
 	SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 	FROM(
@@ -181,18 +205,18 @@ WHERE s.rn=1";
             return data[0];
         }
         /// <summary>
-        /// 计算按风险等级分组的总市值.含字段:risk, amount,value,charge,profit
+        /// 计算按风险等级分组的总市值.含字段:risk, value,profit
         /// </summary>
         /// <returns></returns>
-        public static List<AssetM> ValueTotalByRisk()
+        public static Dictionary<string,object>[] ValueTotalByRisk()
         {
             string sql = $@"
-SELECT kv.title risk,s.amount,s.charge,s.profit,s.value
+SELECT kv.title Risk,s.Profit,s.Value,kv.Comment
 FROM(
-	SELECT title,code FROM keyval
+	SELECT title,code,comment FROM keyval
 	WHERE category={(int)KVEnumKind.风险等级}) kv
 LEFT JOIN(
-	SELECT risk, SUM(amount) amount,SUM(value) value,SUM(charge) charge,SUM(profit) profit
+	SELECT risk,SUM(value) value,SUM(profit) profit
 	FROM(
 		SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 		FROM(
@@ -206,22 +230,29 @@ LEFT JOIN(
 ON kv.code=s.risk
 ORDER BY kv.title";
             SQLServer db = new SQLServer();
-            var data = db.ExecuteQuery<AssetM>(sql);
-            if (data == null)
+            var data = db.ExecuteQuery(sql);
+            if (data != null)
             {
-                return null;
+                foreach (var item in data)
+                {
+                    if (item["Value"] ==DBNull.Value)
+                        item["Value"] = 0;
+                    if (item["Profit"] == DBNull.Value)
+                        item["Profit"] = 0;
+                }
             }
-            return data.ToList();
+            return data;
         }
+
         /// <summary>
-        /// 计算按机构分组的总市值.含字段:excorg, amount,value,charge,profit
+        /// 计算按机构分组的总市值.含字段:excorg, value,profit
         /// </summary>
         /// <returns></returns>
         public static List<AssetM> ValueTotalByExcOrg()
         {
             string sql = $@"
-SELECT kv.title excorg,s.amount,s.charge,s.profit,s.value FROM(
-	SELECT excOrg, SUM(amount) amount,SUM(value) value,SUM(charge) charge,SUM(profit) profit
+SELECT kv.title excorg,s.profit,s.value FROM(
+	SELECT excOrg, SUM(value) value,SUM(profit) profit
 	FROM(
 		SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 		FROM(
@@ -242,6 +273,35 @@ ON kv.code=s.excOrg";
             }
             return data.ToList();
         }
-        
+
+        /// <summary>
+        /// 计算按资产种类的市值.含字段:kind, value, profit
+        /// </summary>
+        /// <returns></returns>
+        public static List<AssetM> ValueTotalByKind()
+        {
+            string sql = $@"
+SELECT kv.title kind,s.profit,s.value FROM(
+	SELECT kind, SUM(value) value,SUM(profit) profit
+	FROM(
+		SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
+		FROM(
+			SELECT a.*
+			FROM Asset a
+			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
+			WHERE d.ctime IS NULL) a
+		) b
+	WHERE b.rn=1
+	GROUP BY b.kind) s
+JOIN KeyVal kv
+ON kv.code=s.kind";
+            SQLServer db = new SQLServer();
+            var data = db.ExecuteQuery<AssetM>(sql);
+            if (data == null)
+            {
+                return null;
+            }
+            return data.ToList();
+        }
     }
 }

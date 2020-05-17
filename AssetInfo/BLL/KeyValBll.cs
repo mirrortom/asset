@@ -23,11 +23,12 @@ namespace AssetInfo.BLL
         {
             return RandHelp.NewPassWord(8, 24);
         }
+
         /// <summary>
         /// 添加一个新的"K-V对",返回新KV对的code(8长度的字符串).如果添加失败返回错误信息
         /// </summary>
         /// <returns></returns>
-        public static string Add(KeyvalM para)
+        public static void Add(KeyvalM para)
         {
             // code是PK,不能重复,尝试10次
             string insert = "insert into KeyVal(code,title,category,comment,ctime,orderby)";
@@ -39,11 +40,35 @@ namespace AssetInfo.BLL
                 int re = db.Insert<KeyvalM>(insert, para);
                 if (re == 1)
                 {
-                    return para.Code;
+                    // 更新缓存
+                    CacheRefresh();
+                    para.ErrorCode = 200;
+                    return;
                 }
             }
-            return "db error add is failed!";
+            para.ErrorMsg= AlertMsg.数据库错误.ToString();
         }
+
+        /// <summary>
+        /// 修改,只修改 title,comment这两个字段
+        /// </summary>
+        /// <param name="para"></param>
+        /// <returns></returns>
+        public static void Update(KeyvalM para)
+        {
+            string update = "update KeyVal(title,comment) where code=@code";
+            SQLServer db = new SQLServer();
+            int re = db.Update<KeyvalM>(update, para);
+            if (re == 1)
+            {
+                // 更新缓存
+                CacheRefresh();
+                para.ErrorCode = 200;
+                return;
+            }
+            para.ErrorMsg = AlertMsg.数据库错误.ToString();
+        }
+
         /// <summary>
         /// 停用/启用 tabId(表名),colId(记录id),on(1=on,0=off) 3个参数
         /// </summary>
@@ -73,10 +98,13 @@ namespace AssetInfo.BLL
                 // 停用
                 isok = db.Insert<OnOff>(off, para) > 0;
             }
+            // 更新缓存
+            CacheRefresh();
             return isok;
         }
+
         /// <summary>
-        /// 获取keyval表所有数据,一个code为键,KeyvalM为值的字典.数据会加入缓存
+        /// 获取keyval表所有数据,code为键,KeyvalM为值的字典.首次获取时,数据会加入缓存.
         /// </summary>
         /// <param name="code"></param>
         /// <returns></returns>
@@ -97,6 +125,28 @@ namespace AssetInfo.BLL
             }
             return dicts;
         }
+
+        /// <summary>
+        /// 缓存刷新 在修改了KV表的数据后,要调用这个方法
+        /// </summary>
+        /// <returns></returns>
+        public static void CacheRefresh()
+        {
+            // 读取缓存
+            Dictionary<string, KeyvalM> dicts = cache.Get<Dictionary<string, KeyvalM>>(Table.keyval.ToString());
+            // 无缓存时,不必刷新
+            if (dicts != null)
+            {
+                List<KeyvalM> data = All(new KeyvalM());
+                dicts = new Dictionary<string, KeyvalM>();
+                foreach (var item in data)
+                {
+                    dicts.Add(item.Code, item);
+                }
+                cache.Set<Dictionary<string, KeyvalM>>(Table.keyval.ToString(), dicts);
+            }
+        }
+
         /// <summary>
         /// 返回code对应的标题
         /// </summary>
@@ -108,6 +158,7 @@ namespace AssetInfo.BLL
             if (dicts == null) return null;
             return dicts[code].Title;
         }
+
         /// <summary>
         /// 数据:查找出符合条件的所有记录
         /// </summary>
@@ -147,15 +198,16 @@ namespace AssetInfo.BLL
         {
             StringBuilder sb = new StringBuilder("1=1");
             string where = sb.ToString();
-            string sql = $@"SELECT code,title,category,ctime,comment
+            string sql = $@"SELECT code,title,category,ctime,comment,orderby
                             FROM Keyval
-                            WHERE id=@id and {where}";
+                            WHERE code=@id and {where}";
             //
             SQLServer db = new SQLServer();
             // 数据列表
             KeyvalM[] data = db.ExecuteQuery<KeyvalM>(sql, id, 1);
             return data?[0];
         }
+
         /// <summary>
         /// 判断指定id是否为表中记录.enabled参数为true时,除了是表中记录还要是开启的
         /// </summary>
@@ -181,6 +233,7 @@ namespace AssetInfo.BLL
             res = db.ExecuteScalar(isEnabled, code, 1);
             return int.Parse(res.ToString()) == 0;
         }
+
         /// <summary>
         /// 修改排序.
         /// </summary>
@@ -200,7 +253,7 @@ namespace AssetInfo.BLL
             db.BeginTransaction();
             for (int i = 0; i < order.Length; i++)
             {
-                int re = db.ExecuteNoQuery(sql, i+1, order[i]);
+                int re = db.ExecuteNoQuery(sql, i + 1, order[i]);
                 if (re == -999)
                 {
                     db.RollBackTransaction();
@@ -214,6 +267,8 @@ namespace AssetInfo.BLL
                 return data;
             }
             data.ErrorCode = 200;
+            // 更新缓存
+            CacheRefresh();
             return data;
         }
     }

@@ -1,8 +1,17 @@
 ﻿<div class="page">
-  <p class="article-title warning">搜索</p>
+  <p class="article-title warning">搜索 <a id="clearSearch" class="btn sm gray mg-l-10" searchFlag="0">清除搜索</a></p>
+  <div class="grids">
+    <span class="grid-1">资产名称</span>
+    <div class="grid-11" id="titleSearch"></div>
+  </div>
+  <div class="grids">
+    <span class="grid-1">资产类型</span>
+    <div class="grid-11" id="kindSearch"></div>
+  </div>
+  <br />
   <div id="assetlist"></div>
-  <hr class="line"/>
-  <p class="text-center">到底了</p>
+  <hr class="line" />
+  <p class="text-center">-- 到底了 --</p>
 </div>
 <script>
   ((win) => {
@@ -16,16 +25,19 @@
     // page init
     //===========
     list();
-
+    clearSearchBtn();
     //===========
     // function
     //===========
+
     // table data
     function list() {
       post(cfg.ApiAssetList, {})
         .then(data => {
           if (data.errcode == 200) {
             createTable(data.list);
+            createSearch(data.list);
+            refreshTableBySearchBtn();
           } else if (data.errmsg) {
             $('#assetlist').html(`<p class="text-warning">${data.errmsg}</p>`);
           } else
@@ -41,9 +53,8 @@
       };
       // tab header
       let th = '';
-      th += `<tr><th>市值 / 名称${span('代码')}</th><th>成本${span('浮盈')}</th><th>风险</th>`;
-      th += `<th>${span('利率 / 费用')}期限(天)</th>`;
-      th += `<th>${span('更新日')}购买日</th>`;
+      th += `<tr><th>名称${span('代码')}</th><th>市值${span('盈亏')}</th><th>现价${span('成本')}</th><th>持仓</th>`;
+      th += `<th>风险</th><th>更新时间</th><th>年息%</th>`;
       th += `<th>${span('起息日')}到期日</th>`;
       th += `<th>种类${span('机构')}</th><th>状态</th><th>备注</th></th>`;
       th += `<th>功能</td></tr >`;
@@ -51,22 +62,24 @@
       let rows = '';
       for (var i = 0, len = data.length; i < len; i++) {
         let item = data[i];
-        let cols = `<td>${span('￥' + item.Value, 'text-danger')} ${span(item.Title)} ${span(item.Code)}</td>`;
-        cols += `<td>${span(item.Amount)}${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        let cols = `<td>${span(item.Title)} ${span(item.Code)}</td>`;
+        cols += `<td>${span(item.Value, 'text-danger')} ${span(item.Profit, item.Profit >= 0 ? 'text-danger' : 'text-success')}</td>`;
+        cols += `<td>${span(item.Price)}${span(item.Amount)}</td>`;
+        cols += `<td>${item.Positions}</td>`;
         cols += `<td>${item.Risk}</td>`;
-        // 利率 费用 期限
-        cols += `<td>${span(item.Rate + '%')}${span(item.Charge)}${span(item.Term == 0 ? '—' : item.Term)}</td>`;
-        // 更新/购买 日期
-        cols += `<td>${span(item.Ctime, 'text-danger')}${span(item.Buydate, 'text-grayse')}</td>`;
+        //  更新时间 利率
+        cols += `<td>${span(item.Ctime, 'text-danger')}</td><td>${span(item.Rate + '%')}</td>`;
+        // 起息日 / 到期日
         cols += `<td>${span(item.Valuedate.substr(0, 10))}${span(item.Expdate.indexOf('2100') >= 0 ? '—' : item.Expdate.substr(0, 10))}</td>`;
         cols += `<td>${span(item.Kind)}${span(item.ExcOrg)}</td>`;
         cols += `<td>${item.Status}</td><td><span class="d-block text-overflow" style="width:80px">${item.Remark}</span></td>`;
+        // 功能
         cols += `<td><a class="btn info sm update-btns" assetid="${item.Id}" >更新</a>`;
         cols += `<a class="btn success sm history-btns" assetid="${item.Id}" >历史</a></td >`;
         //
-        rows += `<tr>${cols}</tr>`;
+        rows += `<tr assetid="${item.Id}" kind="${item.Kind}">${cols}</tr>`;
       }
-      let table = `<table class="table">${th}${rows}</table>`;
+      let table = `<table class="table border hover">${th}${rows}</table>`;
       $('#assetlist').empty().html(table);
       //
       opBind();
@@ -86,6 +99,125 @@
         };
       });
     }
+    // =====
+    // 搜索
+    // =====
+    // 生成搜索条件,搜索是前端的实现.根据资产列表数据生成搜索条件.
+    // refresh=true 强制重新生成标题列表
+    // 要加新的搜索方式时,在此方法加.
+    function createSearch(data, refresh) {
+      // 为了在切换页面时,保留上次的搜索条件和结果,判断是否搜索过.没有搜索过才生成
+      if (searchFlag() == 1 && refresh != true) return;
 
+      let list = data;
+      // 清空搜索时,没有数据,要从缓存取
+      if (data == null) {
+        // 从缓存取
+        let liststr = sessionStorage.getItem('tmp');
+        if (liststr == null) {
+          $('titleSearch').html('<p>搜索条件生成失败!</p>');
+          return;
+        }
+        list = JSON.parse(liststr);
+      }
+
+      // 按资产名称
+      titleSearchBtns(list);
+      // 按资产种类
+      kindSearchBtns(list);
+      // 缓存数据
+      if (data != null)
+        sessionStorage.setItem('tmp', JSON.stringify(data));
+    }
+
+    function titleSearchBtns(data) {
+      let html = '';
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        html += `<a class="btn sm mg-r-5 mg-b-5" assetid="${item.Id}">${item.Title}</a>`;
+      }
+      $('#titleSearch').html(html);
+      // 绑定点击事件
+      $('#titleSearch a[assetid]').click((item) => {
+        let id = $(item).prop('assetid');
+        let ischecked = $(item).hasClass('warning');
+        if (ischecked == true) {
+          $(item).removeClass('warning');
+        } else {
+          $(item).addClass('warning');
+        }
+        refreshTableBySearchBtn();
+        searchFlag(1);
+      })
+    }
+
+    function kindSearchBtns(data) {
+      // 资产类型搜索条件直接使用汉字
+      let kinds = [];
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        if (kinds.indexOf(item.Kind) >= 0) continue;
+        kinds.push(item.Kind);
+      }
+      let html = '';
+      for (var i = 0, len = kinds.length; i < len; i++) {
+        let item = kinds[i];
+        html += `<a class="btn sm mg-r-5 mg-b-5" kind="${item}">${item}</a>`;
+      }
+      $('#kindSearch').html(html);
+      // 绑定点击事件
+      $('#kindSearch a[kind]').click((item) => {
+        let id = $(item).prop('kind');
+        let ischecked = $(item).hasClass('warning');
+        if (ischecked == true) {
+          $(item).removeClass('warning');
+        } else {
+          $(item).addClass('warning');
+        }
+        refreshTableBySearchBtn();
+        searchFlag(1);
+      })
+    }
+
+    // 根据搜索按钮状态,显示资产表格内容
+    function refreshTableBySearchBtn() {
+      // 没有一个搜索选中按钮(或者搜索区数据还没有生成),显示全部
+      if (!$('#titleSearch a.warning[assetid]').length &&
+        !$('#kindSearch a.warning[kind]').length) {
+        $('#assetlist tr[assetid]').removeClass('d-none');
+        return;
+      }
+      // 显示选中的,隐藏没有选中的.(隐藏所有,再显示被选中的资产)
+      $('#assetlist tr[assetid]').addClass('d-none');
+      // 名称
+      $('#titleSearch a.warning[assetid]').each(item => {
+        let id = $(item).prop('assetid');
+        $('#assetlist tr[assetid="' + id + '"]').removeClass('d-none');
+      })
+      // 类型
+      $('#kindSearch a.warning[kind]').each(item => {
+        let kind = $(item).prop('kind');
+        $('#assetlist tr[kind="' + kind + '"]').removeClass('d-none');
+      })
+    }
+
+    // 搜索区域使用标志,1=已经使用过搜索 0=未使用过.不传则返回标志.
+    function searchFlag(flag) {
+      if (flag == undefined) {
+        return $('#clearSearch').prop('searchFlag');
+      }
+      $('#clearSearch').prop('searchFlag', flag);
+    }
+    // 清空(恢复)搜索按钮
+    function clearSearchBtn() {
+      $('#clearSearch').click(() => {
+        // 显示所有资产
+        $('#assetlist tr[assetid]').removeClass('d-none');
+        // 重新生成搜索
+        createSearch(null, true);
+        // 按钮属性 searchFlag 0=未使用过搜索 1=已经使用过搜索
+        searchFlag(0);
+      })
+    }
   })(window);
 </script>

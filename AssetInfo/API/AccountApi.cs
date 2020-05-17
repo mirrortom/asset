@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using AssetInfo.Help;
 using AssetInfo.BLL;
+using Microsoft.Extensions.Primitives;
 
 namespace AssetInfo
 {
@@ -26,10 +27,27 @@ namespace AssetInfo
             {
                 // 生成token返回客户端
                 string tk = Token.NewToken();
+                LoginLog(true);
                 await this.Json(new { errcode = 200, token = tk });
                 return;
             }
+            LoginLog(false);
             await this.Json(new { errmsg = "login error!" });
+        }
+
+        /// <summary>
+        /// 登录成功时,到数据库加一条日志
+        /// </summary>
+        /// <param name="isok">true=登录成功</param>
+        private void LoginLog(bool isok)
+        {
+            // 取出HOST,USERAGENT信息
+            this.Request.Headers.TryGetValue("User-Agent", out StringValues useragent);
+            this.Request.Headers.TryGetValue("Host", out StringValues host);
+            string ipport = $"{this.HttpContext.Connection.RemoteIpAddress.ToString()}:{this.HttpContext.Connection.RemotePort.ToString()}";
+            string insert = $"insert into loginlog(host,ip,ctime,useragent,info)";
+            DBA.SQLServer db = new DBA.SQLServer();
+            db.Insert(insert, host.ToString(), ipport.ToString(), DateTimeOffset.Now, useragent.ToString(), isok ? "1" : "0");
         }
 
         private static bool CheckPwd(string base64Pwd)

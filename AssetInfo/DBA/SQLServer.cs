@@ -50,7 +50,19 @@ namespace AssetInfo.DBA
         /// </summary>
         public SQLServer()
         {
-            this.ConnectionString = @"server=(localdb)\.\mylocaldb;uid=sa;pwd=123456;Initial Catalog=Asset";
+           
+            int version = 1;
+
+            if (version == 0)
+            {
+                // 测试
+                this.ConnectionString = @"server=(localdb)\.\mylocaldb;uid=sa;pwd=123456;Initial Catalog=Asset";
+            }
+            else
+            {
+                // 正式
+                this.ConnectionString = @"server=(localdb)\.\mylocaldb;uid=sa;pwd=123456;Initial Catalog=MirrorAsset";
+            }
         }
         public SQLServer(string connectionString)
         {
@@ -446,7 +458,7 @@ namespace AssetInfo.DBA
                 this.cmd.Parameters.Add(new SqlParameter(paranames[i].Value, paraitem));
             }
         }
-        
+
         /// <summary>
         /// 泛型重载:
         /// <para>初始化命令:根据传入对象属性名和参数名匹配,自动化查找参数值</para>
@@ -642,7 +654,7 @@ namespace AssetInfo.DBA
                                 {
                                     prop.SetValue(tmp, dr[i] == DBNull.Value
                                          ? null : Convert.ChangeType(dr[i], prop.PropertyType));
-                                   
+
                                 }
                             }
                             re.Add(tmp);

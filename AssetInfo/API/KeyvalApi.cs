@@ -69,7 +69,7 @@ namespace AssetInfo
             KeyvalM data = KeyValBll.GetById(para.Code);
             if (data == null)
             {
-                await this.Json(new { msg = para.ErrorMsg });
+                await this.Json(new { msg = AlertMsg.没有数据.ToString() });
                 return;
             }
             // 返回字段按需设定
@@ -81,35 +81,35 @@ namespace AssetInfo
                 data.Comment,
                 data.Ctime
             };
-            await this.Json(redata);
+            await this.Json(new { item = redata, errcode = 200 });
         }
 
         [HTTPPOST]
         public async Task Add()
         {
-            var para = this.ParaForm();
-            string parajson = SerializeHelp.ObjectToJSON(para);
-            var model = SerializeHelp.JsonToObject<KeyvalM>(parajson);
-            if (string.IsNullOrWhiteSpace(model.Title))
+            var para = this.ParaForm<KeyvalM>();
+            if (string.IsNullOrWhiteSpace(para.Title))
             {
                 await this.Json(new { errcode = 300, errmsg = "Title is notnull" });
                 return;
             }
-            if (string.IsNullOrWhiteSpace(model.Comment))
+            if (string.IsNullOrWhiteSpace(para.Comment))
             {
                 await this.Json(new { errcode = 300, errmsg = "Comment is notnull" });
                 return;
             }
-            string result = KeyValBll.Add(model);
-            await this.Json(new { errmsg = result, errcode = result.Length != 8 ? 400 : 200 });
+            if (string.IsNullOrWhiteSpace(para.Code))
+            {
+                // 新增
+                KeyValBll.Add(para);
+            }
+            else
+            {
+                // 更新
+                KeyValBll.Update(para);
+            }
+            await this.Json(new { errmsg = para.ErrorMsg, errcode = para.ErrorCode });
         }
 
-        [HTTPPOST]
-        public async Task UpdateItemById()
-        {
-            var para = this.ParaForm();
-            //var result = KeyValBll.UpdateItemById(para);
-            await this.Json(new { msg = para.ErrorMsg });
-        }
     }
 }

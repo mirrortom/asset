@@ -5,27 +5,39 @@
       <h4 id="assetValue" class="text-warning"></h4>
     </div>
     <div class="grid-3 grid-md-2 grid-lg-2 grid-xl-2">
-      <span class="label info">🍓 总成本</span>
-      <h4 id="assetAmount" class="text-info"></h4>
-    </div>
-    <div class="grid-3 grid-md-2 grid-lg-2 grid-xl-2">
       <span class="label">📈 总浮盈</span>
       <h4 id="assetProfit"></h4>
     </div>
   </div>
+  <p class="article-title danger">市值风险比例</p>
   <div class="grids">
-    <div class="grid-10 grid-md-7 grid-lg-5 grid-xl-4">
-      <p class="article-title danger">市值风险比例</p>
+    <div class="grid-12 grid-md-9 grid-lg-7 grid-xl-6">
       <div id="byrisk"></div>
     </div>
+    <div class="d-none d-lg-block grid-4">
+      <canvas id="byrisk_cav"></canvas>
+    </div>
   </div>
+  <p class="article-title warning">市值机构比例</p>
   <div class="grids">
-    <div class="grid-10 grid-md-7 grid-lg-5 grid-xl-4">
-      <p class="article-title info">市值机构比例</p>
+    <div class="grid-12 grid-md-9 grid-lg-7 grid-xl-6">
       <div id="byexcorg"></div>
+    </div>
+    <div class="d-none d-lg-block grid-4">
+      <canvas id="byexcorg_cav"></canvas>
+    </div>
+  </div>
+  <p class="article-title info">市值资产类型比例</p>
+  <div class="grids">
+    <div class="grid-12 grid-md-9 grid-lg-7 grid-xl-6">
+      <div id="bykind"></div>
+    </div>
+    <div class="d-none d-lg-block grid-4">
+      <canvas id="bykind_cav"></canvas>
     </div>
   </div>
   <p class="text-danger text-lg mg-tb-10" id="errinfobox"></p>
+  <hr class="line" />
 </div>
 <script>
   ((win) => {
@@ -39,6 +51,7 @@
     // page init
     //===========
     statistic();
+
     //===========
     // function
     //===========
@@ -48,15 +61,18 @@
         .then(data => {
           if (data.errcode == 200) {
             $('#assetValue').text('￥' + data.Value);
-            $('#assetAmount').text('￥' + data.Amount);
             $('#assetProfit').html(`<span class="${data.Profit >= 0 ? 'text-danger' : 'text-success'}">￥${data.Profit}</span>`);
             // 按风险等级
             if (data.byRisk) {
-              statisticByRisk(data,data.byRisk)
+              statisticByRisk(data, data.byRisk)
             }
             // 按机构
             if (data.byExcOrg) {
               statisticByExcOrg(data, data.byExcOrg)
+            }
+            // 按资产种类
+            if (data.byKind) {
+              statisticByKind(data, data.byKind)
             }
           } else if (data.errmsg) {
             $('#errinfobox').html(data.errmsg);
@@ -68,28 +84,65 @@
         });
     }
     // 按风险分组
-    function statisticByRisk(total,list) {
-      let th = '<tr><th>等级</th><th>比例</th><th>市值￥</th><th>成本￥</th><th>浮盈￥</th></tr>';
+    function statisticByRisk(total, list) {
+      let th = '<tr><th>等级</th><th>比例</th><th>市值￥</th><th>浮盈￥</th><th>说明</th></tr>';
       let table = createTable(total, list, th, 'Risk');
       $('#byrisk').empty().html(table);
+      createCav('byrisk_cav', $('#byrisk')[0].clientHeight, 'red',total, list, 'Risk');
     }
     // 按机构分组
     function statisticByExcOrg(total, list) {
-      let th = '<tr><th>机构</th><th>比例</th><th>市值￥</th><th>成本￥</th><th>浮盈￥</th></tr>';
+      let th = '<tr><th>机构</th><th>比例</th><th>市值￥</th><th>浮盈￥</th></tr>';
       let table = createTable(total, list, th, 'ExcOrg');
       $('#byexcorg').empty().html(table);
+      createCav('byexcorg_cav', $('#byexcorg')[0].clientHeight,'yellow', total, list, 'ExcOrg');
     }
-    function createTable(total, list,th,groupby) {
+    // 按资产种类分组
+    function statisticByKind(total, list) {
+      let th = '<tr><th>种类</th><th>比例</th><th>市值￥</th><th>浮盈￥</th></tr>';
+      let table = createTable(total, list, th, 'Kind');
+      $('#bykind').empty().html(table);
+      createCav('bykind_cav', $('#bykind')[0].clientHeight,'blue', total, list, 'Kind');
+    }
+
+    function createTable(total, list, th, groupby) {
       let rows = '';
       for (var i = 0, len = list.length; i < len; i++) {
         let item = list[i];
         let cols = `<td>${item[groupby]}</td>`;
         cols += `<td>${(parseFloat(item.Value) / parseFloat(total.Value) * 100).toFixed(1)}%</td>`;
-        cols += `<td>${item.Value}</td><td>${item.Amount}</td>`;
+        cols += `<td>${item.Value}</td>`;
         cols += `<td><span class="${item.Profit >= 0 ? 'text-danger' : 'text-success'}">${item.Profit}</span></td>`;
+        if (item.Comment)
+          cols += `<td>${item.Comment}</td>`;
         rows += `<tr>${cols}</tr>`;
       }
-      return `<table class="table">${th}${rows}</table>`;
+      return `<table class="table hover">${th}${rows}</table>`;
+    }
+
+    function createCav(cavid,cavHeight,color, total, list, groupby) {
+      let canvas = document.getElementById(cavid);
+      let ctx = canvas.getContext('2d');
+      console.log(cavHeight);
+      ctx.canvas.height = cavHeight;
+      ctx.font = '16px serial';
+      
+      // 分组坐标数据
+      for (var i = 0, len = list.length; i < len; i++) {
+        let item = list[i];
+        // bar len
+        let len = parseFloat(item.Value) / parseFloat(total.Value) * 300;
+
+        //
+        ctx.beginPath();
+        ctx.fillStyle = '#efefef';
+        ctx.fillRect(0, i * 30 + 32, 300, 22);
+
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.fillRect(0, i * 30 + 32, len, 22);
+      }
+      // 柱子
     }
   })(window);
 </script>

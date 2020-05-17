@@ -47,7 +47,7 @@
             token.newToken(data.token);
 
             $('#login_pwd').val('')
-            $('#errbox').html('登录成功!');
+            $('#errbox').html('登录成功!3秒跳转首页...');
             setTimeout(() => {
               $('#errinfobox').html('');
               router.goto('/html/index.html');

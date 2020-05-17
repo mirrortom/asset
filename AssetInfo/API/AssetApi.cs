@@ -74,17 +74,16 @@ namespace AssetInfo
                 data.Code,
                 data.Amount,
                 data.Value,
-                data.Charge,
+                data.Positions,
+                data.Price,
                 data.Remark,
                 data.Profit,
                 data.ExcOrg,
                 data.Kind,
                 data.Risk,
-                BuyDate = data.BuyDate.ToString("yyyy/MM/dd HH:mm"),
                 ValueDate = data.ValueDate.ToString("yyyy/MM/dd HH:mm"),
                 ExpDate = data.ExpDate.ToString("yyyy/MM/dd HH:mm"),
                 data.Rate,
-                data.Term,
                 data.Status,
                 Ctime = data.Ctime.ToString("yyyy/MM/dd HH:mm"),
                 data.ItemCode
@@ -100,6 +99,24 @@ namespace AssetInfo
             await this.Json(new { errcode = para.ErrorCode, errmsg = para.ErrorMsg });
         }
 
+        [HTTPPOST]
+        public async Task Titles()
+        {
+            var para = this.ParaForm<AssetM>();
+            List<AssetM> data = AssetBll.HistoryTitles(para);
+            if (data.Count == 0)
+            {
+                await this.Json(new { errmsg = para.ErrorMsg, errcode = para.ErrorCode });
+                return;
+            }
+            // 字段
+            var redata = data.Select(o => new {
+                o.Title,
+                o.Id
+            });
+            await this.Json(new { list = redata, errcode = 200 });
+        }
+
         /// <summary>
         /// 资产统计
         /// </summary>
@@ -113,18 +130,18 @@ namespace AssetInfo
                 await this.Json(new { errcode = 301, errmsg = data.ErrorMsg });
                 return;
             }
-            List<AssetM> byRisk = AssetBll.ValueTotalByRisk();
+            Dictionary<string, object>[] byRisk = AssetBll.ValueTotalByRisk();
             List<AssetM> byExcOrg = AssetBll.ValueTotalByExcOrg();
+            List<AssetM> byKind = AssetBll.ValueTotalByKind();
             var redata = new
             {
                 data.Value,
-                data.Amount,
                 data.Profit,
-                data.Charge,
-                byRisk= SerializeHelp.ObjectsToDicts(byRisk, nameof(AssetM.Risk), nameof(AssetM.Value),
-                nameof(AssetM.Amount),nameof(AssetM.Profit), nameof(AssetM.Charge)),
-                byExcOrg= SerializeHelp.ObjectsToDicts(byExcOrg, nameof(AssetM.ExcOrg), nameof(AssetM.Value),
-                nameof(AssetM.Amount), nameof(AssetM.Profit), nameof(AssetM.Charge)),
+                byRisk = data.Value == 0 ? null : byRisk,
+                byExcOrg = byExcOrg == null ? null :
+                SerializeHelp.ObjectsToDicts(byExcOrg, nameof(AssetM.ExcOrg), nameof(AssetM.Value), nameof(AssetM.Profit)),
+                byKind = byKind==null ? null :
+                SerializeHelp.ObjectsToDicts(byKind, nameof(AssetM.Kind), nameof(AssetM.Value), nameof(AssetM.Profit)),
                 errcode = data.ErrorCode
             };
             await this.Json(redata);
@@ -138,17 +155,16 @@ namespace AssetInfo
                 o.Code,
                 o.Amount,
                 o.Value,
-                o.Charge,
+                o.Positions,
+                o.Price,
                 o.Remark,
                 o.Profit,
                 Risk = KeyValBll.CodeToTitle(o.Risk),
                 ExcOrg = KeyValBll.CodeToTitle(o.ExcOrg),
                 Kind = KeyValBll.CodeToTitle(o.Kind),
-                Buydate = o.BuyDate.ToString("yyyy/MM/dd HH:mm"),
                 Valuedate = o.ValueDate.ToString("yyyy/MM/dd HH:mm"),
                 Expdate = o.ExpDate.ToString("yyyy/MM/dd HH:mm"),
                 o.Rate,
-                o.Term,
                 Status = KeyValBll.CodeToTitle(o.Status),
                 Ctime = o.Ctime.ToString("yyyy/MM/dd HH:mm"),
                 o.ItemCode,

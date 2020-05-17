@@ -8,7 +8,7 @@ using AssetInfo.Entity;
 namespace AssetInfo
 {
     public class AssetDal
-    {   
+    {
         /// <summary>
         /// 数据(分页):查找出符合条件的多个记录
         /// </summary>
@@ -18,7 +18,7 @@ namespace AssetInfo
         {
             StringBuilder sb = new StringBuilder("1=1");
             string where = sb.ToString();
-            string sql = $@"SELECT id,title,code,amount,value,charge,remark,profit,excorg,risk,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode
+            string sql = $@"SELECT id,title,code,amount,value,positions,price,remark,profit,excorg,risk,kind,valuedate,expdate,rate,status,ctime,itemCode
                             FROM Asset
                             WHERE {where}
                             ORDER BY ctime DESC
@@ -27,9 +27,9 @@ namespace AssetInfo
             //
             SQLServer db = new SQLServer();
             // 总条数(如果为0无需再查询)
-            int count=0;
+            int count = 0;
             var listcount = db.ExecuteScalar<AssetM>(sqlcount, para);
-            if (listcount == null || !int.TryParse(listcount.ToString(),out count) || count==0)
+            if (listcount == null || !int.TryParse(listcount.ToString(), out count) || count == 0)
                 return null;
             para.ListCount = count;
             // 数据列表
@@ -44,11 +44,13 @@ namespace AssetInfo
         /// <returns></returns>
         public static AssetM[] All(AssetM para)
         {
-            StringBuilder sb = new StringBuilder("1=1");
+            StringBuilder sb = new StringBuilder();
+            // 条件:市值大于0的,如果市值为0,说明已经清仓
+            sb.Append("AND value > 0");
             string where = sb.ToString();
             // 先排除禁用的记录,再开窗
             string sql = $@"
-SELECT id,title,code,amount,value,charge,remark,profit,risk,excorg,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode
+SELECT id,title,code,amount,value,positions,price,remark,profit,risk,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode
 FROM(
 	SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 	FROM(
@@ -57,7 +59,7 @@ FROM(
 		LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
 		WHERE d.ctime IS NULL) b
 	) s
-WHERE s.rn=1 
+WHERE s.rn=1 {where}
 ORDER BY s.ctime DESC";
             //
             SQLServer db = new SQLServer();
@@ -75,13 +77,13 @@ ORDER BY s.ctime DESC";
         {
             StringBuilder sb = new StringBuilder("1=1");
             string where = sb.ToString();
-            string sql = $@"SELECT id,title,code,amount,value,charge,remark,risk,profit,excorg,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode
+            string sql = $@"SELECT id,title,code,amount,value,positions,price,remark,risk,profit,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode
                             FROM Asset
                             WHERE id=@id and {where}";
             //
             SQLServer db = new SQLServer();
             // 数据列表
-            AssetM[] data = db.ExecuteQuery<AssetM>(sql, para.Id,1);
+            AssetM[] data = db.ExecuteQuery<AssetM>(sql, para.Id, 1);
             return data?[0];
         }
 
@@ -92,7 +94,7 @@ ORDER BY s.ctime DESC";
         /// <returns></returns>
         public static int Add(AssetM para)
         {
-            string insert = @"INSERT INTO Asset (id,title,code,amount,value,charge,remark,risk,profit,excorg,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode)";
+            string insert = @"INSERT INTO Asset (id,title,code,amount,value,positions,price,remark,risk,profit,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode)";
             SQLServer db = new SQLServer();
             return db.Insert<AssetM>(insert, para);
         }
@@ -106,7 +108,7 @@ ORDER BY s.ctime DESC";
         {
             StringBuilder sb = new StringBuilder("1=1");
             string where = sb.ToString();
-            string update = $@"UPDATE Asset (id,title,code,amount,value,charge,remark,risk,profit,excorg,kind,buydate,valuedate,expdate,rate,term,status,ctime,itemCode) WHERE id=@id and {where}";
+            string update = $@"UPDATE Asset (id,title,code,amount,value,positions,price,remark,risk,profit,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode) WHERE id=@id and {where}";
             SQLServer db = new SQLServer();
             return db.Update<AssetM>(update, para);
         }

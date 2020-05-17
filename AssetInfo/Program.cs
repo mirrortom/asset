@@ -52,9 +52,9 @@ namespace AssetInfo
                     // 跨域
                     .UseCors(cors)
                     // 能在请求页面上显示异常信息
-                    //.UseDeveloperExceptionPage()
+                    .UseDeveloperExceptionPage()
                     // 自定义异常处理返回中间件
-                    .UseExceptionHandler(ApiHandler.CustomExceptionHandlerOptions())
+                    //.UseExceptionHandler(ApiHandler.CustomExceptionHandlerOptions())
                     .Use(ApiHandler.UrlHandler)// 自定义路由中间件
                 )
                 .Build();

@@ -21,6 +21,7 @@
     cfg.ApiLogin = cfg.apiUrl('/account/login');
     // --keyval
     cfg.ApiKVAdd = cfg.apiUrl('/keyval/add');
+    cfg.ApiKVItem = cfg.apiUrl('/keyval/item');
     cfg.ApiKVList = cfg.apiUrl('/keyval/list');
     cfg.ApiKVOnOff = cfg.apiUrl('/keyval/onoff');
     cfg.ApiKVOrderBy = cfg.apiUrl('/keyval/orderby');
@@ -30,6 +31,7 @@
     cfg.ApiAssetItem = cfg.apiUrl('/asset/item');
     cfg.ApiAssetHistory = cfg.apiUrl('/asset/history');
     cfg.ApiAssetStatistic = cfg.apiUrl('/asset/statistic');
+    cfg.ApiAssetTitles = cfg.apiUrl('/asset/titles');
     // --
     ns.cfg = cfg;
 
