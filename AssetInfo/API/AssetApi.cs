@@ -130,8 +130,11 @@ namespace AssetInfo
                 await this.Json(new { errcode = 301, errmsg = data.ErrorMsg });
                 return;
             }
+            // 风险等级
             Dictionary<string, object>[] byRisk = AssetBll.ValueTotalByRisk();
+            // 机构
             List<AssetM> byExcOrg = AssetBll.ValueTotalByExcOrg();
+            // 资产类型
             List<AssetM> byKind = AssetBll.ValueTotalByKind();
             var redata = new
             {

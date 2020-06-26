@@ -88,14 +88,10 @@ namespace AssetInfo
         public async Task Add()
         {
             var para = this.ParaForm<KeyvalM>();
-            if (string.IsNullOrWhiteSpace(para.Title))
+            string verrmsg = Validate.CheckEntity<KeyvalM>(para, nameof(para.Title), nameof(para.Comment));
+            if (verrmsg != null)
             {
-                await this.Json(new { errcode = 300, errmsg = "Title is notnull" });
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(para.Comment))
-            {
-                await this.Json(new { errcode = 300, errmsg = "Comment is notnull" });
+                await this.Json(new { errcode = 300, errmsg = verrmsg });
                 return;
             }
             if (string.IsNullOrWhiteSpace(para.Code))

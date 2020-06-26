@@ -289,14 +289,21 @@ namespace AssetInfo.Help
         /// <returns></returns>
         private static bool IsToValid(MemberInfo member, string[] names)
         {
-            // fields为空,验证所有的.否则只验证fields里的.
-            if (names.Length > 0 && !names.Contains(member.Name))
-                return false;
             // 是否贴有特性,没贴不验证.(用特性基类判断,贴子类也有效)
             bool hasValidAttr = Attribute.IsDefined(member, typeof(ValidBaseAttribute));
             if (hasValidAttr == false)
                 return false;
-            return true;
+
+            // 有特性
+            // 1. names为空,验证
+            if (names.Length == 0) return true;
+
+            // 2. 在names里,验证
+            if (names.Contains(member.Name))
+                return true;
+            
+            // 3.不在names里,不验证
+            return false;
         }
 
         /// <summary>

@@ -25,7 +25,7 @@
     <label class="input-label text-center bg-gray grid-1">市值</label>
     <input class="input-text grid-1" name="Value" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">持仓</label>
-    <input class="input-text grid-1" name="Positions" type="text" vtype="notnull|int" verrmsg="必填项|金额无效" />
+    <input class="input-text grid-1" name="Positions" type="text" vtype="notnull|123" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">浮盈</label>
     <input class="input-text grid-1" name="Profit" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">现价</label>
@@ -46,7 +46,7 @@
   <div class="grids-3">
     <a class="btn lg success" id="addAssetBtn">提交</a>
     <i></i>
-    <a class="btn lg" id="resetFormBtn">重置</a>
+    <a class="btn lg" id="resetFormBtn">重置(默认数据)</a>
   </div>
   <p class="text-danger text-lg mg-tb-10" id="errinfobox"></p>
 </div>
@@ -84,12 +84,6 @@
       // 编辑时请求数据,如果出错,尝试20次
       initEditData();
       router.para = null;
-    } else {
-      // 页面默认操作是新增
-      if ($.isEmptyOrNull($('#assetId').val())) {
-        resetForm();
-
-      }
     }
     //===========
     // function
@@ -99,7 +93,7 @@
      * @param {number} maxCount 最多请求次数
      */
     function initEditData(maxCount = 20) {
-      // 下拉框数据填充后,才请求
+      // 要等待下拉框数据填充后,才请求
       if (!$('#excorg1 option').length || !$('#kind2 option').length
         || !$('#status3 option').length || !$('#risk4 option').length) {
         if (maxCount <= 0) return;

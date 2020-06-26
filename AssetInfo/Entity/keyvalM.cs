@@ -16,20 +16,20 @@ namespace AssetInfo.Entity
         /// <summary>
         /// 种类名 maxlen=50
         /// </summary>
-        [VNotNull]
-        [VStringLength(maxlen = 50)]
+        [VNotNull(errMsg ="种类名字不能为空!")]
+        [VStringLength(maxlen = 50,errMsg = "种类名字不超过50字!")]
         public string Title;
         /// <summary>
         /// 所属分类
         /// </summary>
-        [VNotNull]
+        [VNotNull(errMsg = "所属分类不能为空!")]
         [VDigit]
         public int Category;
         /// <summary>
         /// 说明 maxlen=50
         /// </summary>
-        [VNotNull]
-        [VStringLength(maxlen = 50)]
+        [VNotNull(errMsg = "说明不能为空!")]
+        [VStringLength(maxlen = 50,errMsg = "说明不超过50字!")]
         public string Comment;
         /// <summary>
         /// 记录产生时间

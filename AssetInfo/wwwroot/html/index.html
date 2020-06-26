@@ -95,7 +95,7 @@
       let th = '<tr><th>机构</th><th>比例</th><th>市值￥</th><th>浮盈￥</th></tr>';
       let table = createTable(total, list, th, 'ExcOrg');
       $('#byexcorg').empty().html(table);
-      createCav('byexcorg_cav', $('#byexcorg')[0].clientHeight,'yellow', total, list, 'ExcOrg');
+      createCav('byexcorg_cav', $('#byexcorg')[0].clientHeight,'#dfa700', total, list, 'ExcOrg');
     }
     // 按资产种类分组
     function statisticByKind(total, list) {
@@ -123,7 +123,7 @@
     function createCav(cavid,cavHeight,color, total, list, groupby) {
       let canvas = document.getElementById(cavid);
       let ctx = canvas.getContext('2d');
-      console.log(cavHeight);
+      //console.log(cavHeight);
       ctx.canvas.height = cavHeight;
       ctx.font = '16px serial';
       

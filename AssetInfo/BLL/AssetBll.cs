@@ -225,7 +225,7 @@ LEFT JOIN(
 			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
 			WHERE d.ctime IS NULL) a
 		) b
-	WHERE b.rn=1
+	WHERE b.rn=1 and b.value>0
 	GROUP BY b.risk) s
 ON kv.code=s.risk
 ORDER BY kv.title";
@@ -261,7 +261,7 @@ SELECT kv.title excorg,s.profit,s.value FROM(
 			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
 			WHERE d.ctime IS NULL) a
 		) b
-	WHERE b.rn=1
+	WHERE b.rn=1 and b.value>0
 	GROUP BY b.excOrg) s
 JOIN KeyVal kv
 ON kv.code=s.excOrg";
@@ -291,7 +291,7 @@ SELECT kv.title kind,s.profit,s.value FROM(
 			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
 			WHERE d.ctime IS NULL) a
 		) b
-	WHERE b.rn=1
+	WHERE b.rn=1 and b.value>0
 	GROUP BY b.kind) s
 JOIN KeyVal kv
 ON kv.code=s.kind";

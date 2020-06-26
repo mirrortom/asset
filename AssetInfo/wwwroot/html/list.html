@@ -8,6 +8,10 @@
     <span class="grid-1">资产类型</span>
     <div class="grid-11" id="kindSearch"></div>
   </div>
+  <div class="grids">
+    <span class="grid-1">资产机构</span>
+    <div class="grid-11" id="excOrgSearch"></div>
+  </div>
   <br />
   <div id="assetlist"></div>
   <hr class="line" />
@@ -70,16 +74,16 @@
         //  更新时间 利率
         cols += `<td>${span(item.Ctime, 'text-danger')}</td><td>${span(item.Rate + '%')}</td>`;
         // 起息日 / 到期日
-        cols += `<td>${span(item.Valuedate.substr(0, 10))}${span(item.Expdate.indexOf('2100') >= 0 ? '—' : item.Expdate.substr(0, 10))}</td>`;
+        cols += `<td>${span(item.Valuedate.substr(0, 10))}${item.Expdate.indexOf('2100') >= 0 ? '—' : span(item.Expdate.substr(0, 10), 'text-warning')}</td>`;
         cols += `<td>${span(item.Kind)}${span(item.ExcOrg)}</td>`;
         cols += `<td>${item.Status}</td><td><span class="d-block text-overflow" style="width:80px">${item.Remark}</span></td>`;
         // 功能
         cols += `<td><a class="btn info sm update-btns" assetid="${item.Id}" >更新</a>`;
         cols += `<a class="btn success sm history-btns" assetid="${item.Id}" >历史</a></td >`;
-        //
-        rows += `<tr assetid="${item.Id}" kind="${item.Kind}">${cols}</tr>`;
+        // 支持的搜索条件添加在tr元素上
+        rows += `<tr assetid="${item.Id}" kind="${item.Kind}" excorg="${item.ExcOrg}">${cols}</tr>`;
       }
-      let table = `<table class="table border hover">${th}${rows}</table>`;
+      let table = `<table class="table border-all hover">${th}${rows}</table>`;
       $('#assetlist').empty().html(table);
       //
       opBind();
@@ -104,30 +108,17 @@
     // =====
     // 生成搜索条件,搜索是前端的实现.根据资产列表数据生成搜索条件.
     // refresh=true 强制重新生成标题列表
-    // 要加新的搜索方式时,在此方法加.
+    // 要加新的搜索方式时,在此方法加.(具体参考已实现的搜索函数,注意:数据表格tr元素上添加匹配条件)
     function createSearch(data, refresh) {
       // 为了在切换页面时,保留上次的搜索条件和结果,判断是否搜索过.没有搜索过才生成
       if (searchFlag() == 1 && refresh != true) return;
 
-      let list = data;
-      // 清空搜索时,没有数据,要从缓存取
-      if (data == null) {
-        // 从缓存取
-        let liststr = sessionStorage.getItem('tmp');
-        if (liststr == null) {
-          $('titleSearch').html('<p>搜索条件生成失败!</p>');
-          return;
-        }
-        list = JSON.parse(liststr);
-      }
-
       // 按资产名称
-      titleSearchBtns(list);
+      titleSearchBtns(data);
       // 按资产种类
-      kindSearchBtns(list);
-      // 缓存数据
-      if (data != null)
-        sessionStorage.setItem('tmp', JSON.stringify(data));
+      kindSearchBtns(data);
+      // 按资产机构
+      excOrgSearchBtns(data);
     }
 
     function titleSearchBtns(data) {
@@ -179,11 +170,40 @@
       })
     }
 
+    function excOrgSearchBtns(data) {
+      // 资产机构搜索条件直接使用汉字
+      let orgs = [];
+      for (var i = 0, len = data.length; i < len; i++) {
+        let item = data[i];
+        if (orgs.indexOf(item.ExcOrg) >= 0) continue;
+        orgs.push(item.ExcOrg);
+      }
+      let html = '';
+      for (var i = 0, len = orgs.length; i < len; i++) {
+        let item = orgs[i];
+        html += `<a class="btn sm mg-r-5 mg-b-5" excorg="${item}">${item}</a>`;
+      }
+      $('#excOrgSearch').html(html);
+      // 绑定点击事件
+      $('#excOrgSearch a[excorg]').click((item) => {
+        let id = $(item).prop('excorg');
+        let ischecked = $(item).hasClass('warning');
+        if (ischecked == true) {
+          $(item).removeClass('warning');
+        } else {
+          $(item).addClass('warning');
+        }
+        refreshTableBySearchBtn();
+        searchFlag(1);
+      })
+    }
+
     // 根据搜索按钮状态,显示资产表格内容
     function refreshTableBySearchBtn() {
       // 没有一个搜索选中按钮(或者搜索区数据还没有生成),显示全部
-      if (!$('#titleSearch a.warning[assetid]').length &&
-        !$('#kindSearch a.warning[kind]').length) {
+      if (!$('#titleSearch a.warning[assetid]').length
+        && !$('#kindSearch a.warning[kind]').length
+        && !$('#excOrgSearch a.warning[excorg]').length) {
         $('#assetlist tr[assetid]').removeClass('d-none');
         return;
       }
@@ -199,6 +219,11 @@
         let kind = $(item).prop('kind');
         $('#assetlist tr[kind="' + kind + '"]').removeClass('d-none');
       })
+      // 机构
+      $('#excOrgSearch a.warning[excorg]').each(item => {
+        let excOrg = $(item).prop('excorg');
+        $('#assetlist tr[excorg="' + excOrg + '"]').removeClass('d-none');
+      })
     }
 
     // 搜索区域使用标志,1=已经使用过搜索 0=未使用过.不传则返回标志.
@@ -213,8 +238,8 @@
       $('#clearSearch').click(() => {
         // 显示所有资产
         $('#assetlist tr[assetid]').removeClass('d-none');
-        // 重新生成搜索
-        createSearch(null, true);
+        // 重新获取数据,生成搜索
+        list();
         // 按钮属性 searchFlag 0=未使用过搜索 1=已经使用过搜索
         searchFlag(0);
       })
