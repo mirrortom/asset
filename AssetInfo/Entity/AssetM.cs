@@ -48,7 +48,7 @@ namespace AssetInfo.Entity
         /// <summary>
         /// 持仓
         /// </summary>
-        public int Positions;
+        public decimal Positions;
 
         /// <summary>
         /// 资产版本说明 maxlen=50
@@ -109,9 +109,12 @@ namespace AssetInfo.Entity
         /// 记录生成时间
         /// </summary>
         public DateTimeOffset Ctime;
-
         /// <summary>
-        /// 同一个资产唯一编号(guid32) maxlen=32
+        /// 总值日期 yyyyMMdd int型
+        /// </summary>
+        public int TotalDate;
+        /// <summary>
+        /// 同一个资产(从建仓到清仓期间)唯一编号(guid32) maxlen=32
         /// </summary>
         [VStringLength(len = 32)]
         [VNotNull]

@@ -32,6 +32,7 @@
     cfg.ApiAssetHistory = cfg.apiUrl('/asset/history');
     cfg.ApiAssetStatistic = cfg.apiUrl('/asset/statistic');
     cfg.ApiAssetTitles = cfg.apiUrl('/asset/titles');
+    cfg.ApiTotalUp = cfg.apiUrl('/asset/totalup');
     // --
     ns.cfg = cfg;
 

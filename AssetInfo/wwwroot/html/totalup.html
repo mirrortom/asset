@@ -1,0 +1,46 @@
+﻿<div class="page">
+  <p class="article-title warning">说明</p>
+  <p>每次更新资产后,记得更新总值记录.在当天的23.50前完成.</p>
+  <p>如果某天忘记更新总值,那么在下一次更新资产前,还有一次补救机会.点击更新总值后,总值更新日期记录为更新资产那天的日期.</p>
+  <p>如果某天忘记更新总值,但是下一次已经更新资产了,那么这天的总值记录无法补救,只能放弃.</p>
+  <p>sql语句对总值的求和,只能求出最后那次更新资产时的和.</p>
+  <p class="text-danger">某一天没有更新资产的情况下,无法更新总值.</p>
+  <p class="text-danger">某一天没有更新资产的情况下,上次更新资产后也没有记录总值,那么总值补录到这天.</p>
+  <p class="article-title warning">约定规则</p>
+  <p>每天23.50分前可以操作更新按钮.</p>
+  <p>每天更新多次只会记录最后那次.</p>
+  <p>更新日期记录为一个int型数值,例如 20200830,表示2020年8月30日更新.</p>
+  <p>总值记录表的数据用于首页总值变化图表.</p>
+  <div class="mg-30 text-center">
+    <a class="btn lg warning" id="totalupBtn">更新总值</a>
+    <p class="text-danger text-lg mg-tb-10" id="errbox"></p>
+  </div>
+</div>
+<script>
+  ((win) => {
+    // help
+    let post = win.ns.post;
+    let get = win.ns.get;
+    let cfg = win.ns.cfg;
+    let page = win.ns.page;
+    let token = win.ns.token;
+    let router = win.ns.router;
+
+    $('#totalupBtn').click(thisBtn => {
+      post(cfg.ApiTotalUp, {})
+        .then((data) => {
+          if (data.errcode == 200) {
+            $('#errbox').html(`成功!总值日期: ${data.date} .服务器时间: ${data.time}`);
+          } else if (data.errcode == 201) {
+            $('#errbox').html(`成功!补录总值日期: ${data.date} .服务器时间: ${data.time}`);
+          }
+          else {
+            $('#errbox').html(data.errmsg);
+          }
+        })
+        .catch((err) => {
+          $('#errbox').html('服务器异常!');
+        })
+    });
+  })(window);
+</script>

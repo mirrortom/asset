@@ -25,7 +25,7 @@
     <label class="input-label text-center bg-gray grid-1">市值</label>
     <input class="input-text grid-1" name="Value" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">持仓</label>
-    <input class="input-text grid-1" name="Positions" type="text" vtype="notnull|123" verrmsg="必填项|金额无效" />
+    <input class="input-text grid-1" name="Positions" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">浮盈</label>
     <input class="input-text grid-1" name="Profit" type="text" vtype="notnull|money" verrmsg="必填项|金额无效" />
     <label class="input-label text-center bg-gray grid-1">现价</label>
@@ -166,7 +166,9 @@
         if (!$.formCheck(inputs[i]))
           return;
       }
-      $ui.isBtnLoading(thisobj);
+      if ($ui.isBtnLoading(thisobj)) {
+        return;
+      }
       //
       let para = $.formJson($('#addassetform')[0]);
       post(cfg.ApiAssetAdd, para)

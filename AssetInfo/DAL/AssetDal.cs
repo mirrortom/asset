@@ -56,7 +56,7 @@ FROM(
 	FROM(
 		SELECT a.*
 		FROM Asset a
-		LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
+		LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
 		WHERE d.ctime IS NULL) b
 	) s
 WHERE s.rn=1 {where}
@@ -111,6 +111,49 @@ ORDER BY s.ctime DESC";
             string update = $@"UPDATE Asset (id,title,code,amount,value,positions,price,remark,risk,profit,excorg,kind,valuedate,expdate,rate,status,ctime,itemCode) WHERE id=@id and {where}";
             SQLServer db = new SQLServer();
             return db.Update<AssetM>(update, para);
+        }
+        /// <summary>
+        /// 今天是否更新过资产(只要有1条有效更新就是)
+        /// 也可以指定日期yyyy-MM-dd
+        /// </summary>
+        /// <param name="dateDay">yyyy-MM-dd</param>
+        /// <returns></returns>
+        public static bool IsUpdateToday(string dateDay = null)
+        {
+            string day = dateDay ?? DateTimeOffset.Now.ToString("yyyy-MM-dd");
+            DateTimeOffset dayStart = DateTimeOffset.Parse(day + " 00:00:00");
+            DateTimeOffset dayEnd = DateTimeOffset.Parse(day + " 23:59:59");
+            string sql = $@"SELECT count(b.id)
+FROM(
+	SELECT a.*
+	FROM Asset a
+	LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
+	WHERE d.ctime IS NULL 
+	) b
+where ctime >= @stime AND ctime <= @etime";
+            SQLServer db = new SQLServer();
+            object count = db.ExecuteScalar(sql, dayStart, dayEnd);
+            if (count == null) return false;
+            return int.Parse(count.ToString()) > 0;
+        }
+
+        /// <summary>
+        /// 查询最后有效更新资产日期 返回一个yyyy-MM-dd的日期公式字符串.
+        /// 失败返回 default
+        /// </summary>
+        /// <returns></returns>
+        public static DateTimeOffset GetLastUpDay()
+        {
+            string sql = $@"SELECT TOP 1 a.ctime
+FROM Asset a
+LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
+WHERE d.ctime IS NULL
+ORDER BY a.ctime DESC";
+            SQLServer db = new SQLServer();
+            object lastDate = db.ExecuteScalar(sql);
+            if (lastDate == null) return default;
+            DateTimeOffset date = (DateTimeOffset)lastDate;
+            return date;
         }
     }
 }

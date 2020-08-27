@@ -224,7 +224,7 @@ namespace AssetInfo.Help
     }
 
     /// <summary>
-    /// 金额2位小数,可以负数
+    /// 金额1~3位小数,可以负数
     /// </summary>
     public class VMoneyAttribute : ValidBaseAttribute
     {

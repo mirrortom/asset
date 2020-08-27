@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using AssetInfo.BLL;
 using AssetInfo.Entity;
 using System.Collections.Generic;
+using AssetInfo;
 
 namespace XUnitTestAssetInfo
 {
@@ -20,15 +21,9 @@ namespace XUnitTestAssetInfo
         [Fact]
         public void List()
         {
-            AssetM para = new AssetM();
-            List<AssetM> data = AssetBll.List(para);
-            foreach (var item in data)
-            {
-                log.WriteLine(item.Title);
-            log.WriteLine(item.Ctime.ToString());
-                log.WriteLine("-------------");
-            }
-            
+            string d = AssetDal.GetLastUpDay();
+            log.WriteLine(d);
+
         }
         [Fact]
         public void HistoryList()
@@ -44,5 +39,6 @@ namespace XUnitTestAssetInfo
                 log.WriteLine("-------------");
             }
         }
+
     }
 }

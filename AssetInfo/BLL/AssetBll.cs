@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
+using AssetInfo.DAL;
 using AssetInfo.DBA;
 using AssetInfo.Entity;
 using AssetInfo.Help;
@@ -131,7 +131,11 @@ WHERE a.rn=1";
         }
 
         /// <summary>
-        /// ItemCode值标识同一个资产,首次添加资产时生成,后面更新这个资产时会传来资产Id,据此查得ItemCode值
+        /// ItemCode值标识同一个资产的更新周期,从首次添加起到清仓止,首次添加资产时生成.
+        /// 以后更新这个资产时会传来资产Id,据此查得ItemCode值.
+        /// 举例说明:510300这个资产,在第一次添加时生成ItemCode "xxx",后续更新资产时,
+        /// 此值都是"xxx",一直到清仓都是.
+        /// 假如下一次又添加510300时,会生成新的ItemCode "xxx2".
         /// </summary>
         /// <param name="data"></param>
         private static bool AssetItemCode(AssetM data)
@@ -179,22 +183,22 @@ WHERE a.rn=1";
         }
 
         /// <summary>
-        /// 计算总市值.含字段: amount,value,charge,profit
+        /// 计算当前(最后一次更新后)总资产.含字段: value
         /// </summary>
         /// <returns></returns>
         public static AssetM ValueTotal()
         {
             string sql = $@"
-SELECT SUM(value) value,SUM(profit) profit
+SELECT SUM(value) value
 FROM(
 	SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 	FROM(
 		SELECT a.*
 		FROM Asset a
-		LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
+		LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
 		WHERE d.ctime IS NULL) b
 	) s
-WHERE s.rn=1";
+WHERE s.rn=1 and s.value>0";
             SQLServer db = new SQLServer();
             var data = db.ExecuteQuery<AssetM>(sql);
             if (data == null)
@@ -205,13 +209,108 @@ WHERE s.rn=1";
             return data[0];
         }
         /// <summary>
-        /// 计算按风险等级分组的总市值.含字段:risk, value,profit
+        /// 更新总资产数据表
         /// </summary>
         /// <returns></returns>
-        public static Dictionary<string,object>[] ValueTotalByRisk()
+        public static AssetM TotalUp()
+        {
+            AssetM m = new AssetM();
+            // 1.过时检查
+            TotalUp1_LastTime(m);
+            if (m.ErrorCode > 300) return m;
+            // 2.补录情况
+            TotalUp2_BuLu(m);
+            if (m.ErrorCode > 300) return m;
+            // 2.1补录成功情况
+            if (m.ErrorCode == 201) return m;
+            // 写入数据
+            AssetM totalVal = ValueTotal();
+            if (totalVal.ErrorCode != 200)
+            {
+                m.ErrorCode = 306;
+                m.ErrorMsg = "更新失败,获取总值出错!";
+                return m;
+            }
+            m.Id = RandHelp.NewGuid();
+            m.Value = totalVal.Value;
+            m.Ctime = DateTimeOffset.Now;
+            m.TotalDate = int.Parse(DateTimeOffset.Now.ToString("yyyyMMdd"));
+            TotalDayDal.UpdateVal(m);
+            return m;
+        }
+        /// <summary>
+        /// 补录情况
+        /// </summary>
+        /// <param name="para"></param>
+        private static void TotalUp2_BuLu(AssetM para)
+        {
+            // 查询最后更新资产日期
+            DateTimeOffset lastUpDay = AssetDal.GetLastUpDay();
+            // 表里没有有效更新数据,这种情况也不更新总值.
+            if (lastUpDay == default)
+            {
+                para.ErrorCode = 302;
+                para.ErrorMsg = "没有任何更新记录,不可更新总值!";
+                return;
+            }
+            // 如果日期不是今天,(也就是今天没有更新过资产).再查询这个日期的总值记录,
+            // 如果没有记录,那么补录(总值日期为这天).
+            // 如果有记录,那么不可以更新.
+            int lastday = int.Parse(lastUpDay.ToString("yyyyMMdd"));
+            if (lastday < int.Parse(DateTimeOffset.Now.ToString("yyyyMMdd")))
+            {
+                AssetM totalByDay = TotalDayDal.GetLastValue(lastday);
+                if (totalByDay == null)
+                {
+                    // 补录
+                    AssetM totalVal = ValueTotal();
+                    if (totalVal.ErrorCode != 200)
+                    {
+                        para.ErrorCode = 304;
+                        para.ErrorMsg = "补录失败,获取总值出错!";
+                        return;
+                    }
+                    para.Id = RandHelp.NewGuid();
+                    para.Value = totalVal.Value;
+                    para.Ctime = DateTimeOffset.Now;
+                    para.TotalDate = lastday;
+                    TotalDayDal.UpdateVal(para);
+                    if (para.ErrorCode == 200)
+                    {
+                        para.ErrorCode = 201;
+                        para.ErrorMsg = "补录成功!";
+                    }
+                }
+                else
+                {
+                    para.ErrorCode = 303;
+                    para.ErrorMsg = "今天没更新资产,不可更新总值!";
+                }
+            }
+            // 
+        }
+        /// <summary>
+        /// 总值更新只在每天23.50分前操作
+        /// </summary>
+        /// <param name="para"></param>
+        private static void TotalUp1_LastTime(AssetM para)
+        {
+            // 为了不跨天,总值更新只在每天23.50分前操作
+            string limitTime = DateTimeOffset.Now.ToString("yyyy/MM/dd 23:50:00");
+            if (DateTimeOffset.Now > DateTimeOffset.Parse(limitTime))
+            {
+                para.ErrorCode = 301;
+                para.ErrorMsg = AlertMsg.当前时段禁止该操作.ToString();
+            }
+        }
+        /// <summary>
+        /// 计算按风险等级分组的总市值.含字段:risk, value ,Comment
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, object>[] ValueTotalByRisk()
         {
             string sql = $@"
-SELECT kv.title Risk,s.Profit,s.Value,kv.Comment
+SELECT kv.title Risk,s.Value,kv.Comment
 FROM(
 	SELECT title,code,comment FROM keyval
 	WHERE category={(int)KVEnumKind.风险等级}) kv
@@ -222,7 +321,7 @@ LEFT JOIN(
 		FROM(
 			SELECT a.*
 			FROM Asset a
-			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
+			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
 			WHERE d.ctime IS NULL) a
 		) b
 	WHERE b.rn=1 and b.value>0
@@ -235,30 +334,28 @@ ORDER BY kv.title";
             {
                 foreach (var item in data)
                 {
-                    if (item["Value"] ==DBNull.Value)
+                    if (item["Value"] == DBNull.Value)
                         item["Value"] = 0;
-                    if (item["Profit"] == DBNull.Value)
-                        item["Profit"] = 0;
                 }
             }
             return data;
         }
 
         /// <summary>
-        /// 计算按机构分组的总市值.含字段:excorg, value,profit
+        /// 计算按机构分组的总市值.含字段:excorg, value
         /// </summary>
         /// <returns></returns>
         public static List<AssetM> ValueTotalByExcOrg()
         {
             string sql = $@"
-SELECT kv.title excorg,s.profit,s.value FROM(
+SELECT kv.title excorg,s.value FROM(
 	SELECT excOrg, SUM(value) value,SUM(profit) profit
 	FROM(
 		SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
 		FROM(
 			SELECT a.*
 			FROM Asset a
-			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset.ToString()}'
+			LEFT JOIN disabled d ON d.colid=a.id AND d.tableid='{Table.asset}'
 			WHERE d.ctime IS NULL) a
 		) b
 	WHERE b.rn=1 and b.value>0
@@ -275,13 +372,13 @@ ON kv.code=s.excOrg";
         }
 
         /// <summary>
-        /// 计算按资产种类的市值.含字段:kind, value, profit
+        /// 计算按资产种类的市值.含字段:kind, value
         /// </summary>
         /// <returns></returns>
         public static List<AssetM> ValueTotalByKind()
         {
             string sql = $@"
-SELECT kv.title kind,s.profit,s.value FROM(
+SELECT kv.title kind,s.value FROM(
 	SELECT kind, SUM(value) value,SUM(profit) profit
 	FROM(
 		SELECT *,ROW_NUMBER() OVER(PARTITION BY itemCode ORDER BY ctime DESC) rn
@@ -295,6 +392,22 @@ SELECT kv.title kind,s.profit,s.value FROM(
 	GROUP BY b.kind) s
 JOIN KeyVal kv
 ON kv.code=s.kind";
+            SQLServer db = new SQLServer();
+            var data = db.ExecuteQuery<AssetM>(sql);
+            if (data == null)
+            {
+                return null;
+            }
+            return data.ToList();
+        }
+
+        /// <summary>
+        /// 获取最近30个总值数据,(用于首页显示)
+        /// </summary>
+        /// <returns></returns>
+        public static List<AssetM> Last30TotalVal()
+        {
+            string sql = @"SELECT TOP 30 value,totaldate FROM totalday ORDER BY totaldate DESC";
             SQLServer db = new SQLServer();
             var data = db.ExecuteQuery<AssetM>(sql);
             if (data == null)

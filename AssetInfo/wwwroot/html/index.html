@@ -1,13 +1,8 @@
 ﻿<div class="page">
-  <div class="grids">
-    <div class="grid-3 grid-md-2 grid-lg-2 grid-xl-2">
-      <span class="label warning">💸 总市值</span>
-      <h4 id="assetValue" class="text-warning"></h4>
-    </div>
-    <div class="grid-3 grid-md-2 grid-lg-2 grid-xl-2">
-      <span class="label">📈 总浮盈</span>
-      <h4 id="assetProfit"></h4>
-    </div>
+  <h3 class="text-center">💸 总资产 ￥<span id="assetValue" class="text-warning"></span></h3>
+  <p class="article-title danger">最近30次总资产变化</p>
+  <div>
+    <canvas id="total30day_cav"></canvas>
   </div>
   <p class="article-title danger">市值风险比例</p>
   <div class="grids">
@@ -60,8 +55,7 @@
       post(cfg.ApiAssetStatistic, {})
         .then(data => {
           if (data.errcode == 200) {
-            $('#assetValue').text('￥' + data.Value);
-            $('#assetProfit').html(`<span class="${data.Profit >= 0 ? 'text-danger' : 'text-success'}">￥${data.Profit}</span>`);
+            $('#assetValue').text(data.Value);
             // 按风险等级
             if (data.byRisk) {
               statisticByRisk(data, data.byRisk)
@@ -74,6 +68,10 @@
             if (data.byKind) {
               statisticByKind(data, data.byKind)
             }
+            // 30天总值
+            if (data.lasttotal30) {
+              lastTotal30(data.lasttotal30)
+            }
           } else if (data.errmsg) {
             $('#errinfobox').html(data.errmsg);
           } else
@@ -85,26 +83,79 @@
     }
     // 按风险分组
     function statisticByRisk(total, list) {
-      let th = '<tr><th>等级</th><th>比例</th><th>市值￥</th><th>浮盈￥</th><th>说明</th></tr>';
+      let th = '<tr><th>等级</th><th>比例</th><th>市值￥</th><th>说明</th></tr>';
       let table = createTable(total, list, th, 'Risk');
       $('#byrisk').empty().html(table);
-      createCav('byrisk_cav', $('#byrisk')[0].clientHeight, 'red',total, list, 'Risk');
+      createCav('byrisk_cav', $('#byrisk')[0].clientHeight, 'red', total, list, 'Risk');
     }
     // 按机构分组
     function statisticByExcOrg(total, list) {
-      let th = '<tr><th>机构</th><th>比例</th><th>市值￥</th><th>浮盈￥</th></tr>';
+      let th = '<tr><th>机构</th><th>比例</th><th>市值￥</th></tr>';
       let table = createTable(total, list, th, 'ExcOrg');
       $('#byexcorg').empty().html(table);
-      createCav('byexcorg_cav', $('#byexcorg')[0].clientHeight,'#dfa700', total, list, 'ExcOrg');
+      createCav('byexcorg_cav', $('#byexcorg')[0].clientHeight, '#dfa700', total, list, 'ExcOrg');
     }
     // 按资产种类分组
     function statisticByKind(total, list) {
-      let th = '<tr><th>种类</th><th>比例</th><th>市值￥</th><th>浮盈￥</th></tr>';
+      let th = '<tr><th>种类</th><th>比例</th><th>市值￥</th></tr>';
       let table = createTable(total, list, th, 'Kind');
       $('#bykind').empty().html(table);
-      createCav('bykind_cav', $('#bykind')[0].clientHeight,'blue', total, list, 'Kind');
+      createCav('bykind_cav', $('#bykind')[0].clientHeight, 'blue', total, list, 'Kind');
     }
-
+    // 30天总值变化图
+    function lastTotal30(list) {
+      //console.log(list)
+      // 求最大总值,canvas高度(显示柱子的区域高度)/最大值,得到显示比例 1像素 = x金额
+      let maxVal = list[0].Value, maxItem = list[0], minVal = list[0].Value, minItem = list[0];
+      for (var i = 0, len = list.length; i < len; i++) {
+        if (maxVal < list[i].Value) {
+          maxVal = list[i].Value;
+          maxItem = list[i];
+        }
+        if (minVal > list[i].Value) {
+          minVal = list[i].Value;
+          minItem = list[i];
+        }
+      }
+      // init canvas
+      let canvas = document.getElementById('total30day_cav');
+      let ctx = canvas.getContext('2d');
+      ctx.canvas.width = 1040;
+      ctx.canvas.height = 200;
+      ctx.font = '12px serial';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#efefef';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      // darw
+      // 比例. canvas画布上面和下面各留出25px,显示日期和最大最小值
+      let scale = (ctx.canvas.height - 50) / maxVal;
+      for (var i = list.length - 1, j = 0; i >= 0; i--, j++) {
+        let item = list[i];
+        let x = j * 33 + 20;// 间隔32
+        let y = 175;// 起底高度
+        let w = 9;// 柱子宽
+        let h = -item.Value * scale;// 高度,负值是向上画
+        // 柱子颜色 最大最小颜色不同
+        ctx.beginPath();
+        ctx.fillStyle = 'RGBA(64,128,192,.6)';
+        if (item.TotalDate == maxItem.TotalDate)
+          ctx.fillStyle = 'red';
+        else if (item.TotalDate == minItem.TotalDate)
+          ctx.fillStyle = 'green';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = 'gray';
+        let date = item.TotalDate + '';
+        ctx.fillText(date.substr(0, 4), x, y + 12);
+        ctx.fillText(date.substr(4, 4), x, y + 22);
+      }
+      // 最大最小值
+      ctx.beginPath();
+      ctx.fillStyle = 'red';
+      ctx.fillText(`最高 ￥${maxItem.Value} 日期 ${maxItem.TotalDate}`, 382, 15);
+      ctx.beginPath();
+      ctx.fillStyle = 'green';
+      ctx.fillText(`最低 ￥${minItem.Value} 日期 ${minItem.TotalDate}`, 618, 15);
+    }
     function createTable(total, list, th, groupby) {
       let rows = '';
       for (var i = 0, len = list.length; i < len; i++) {
@@ -112,7 +163,6 @@
         let cols = `<td>${item[groupby]}</td>`;
         cols += `<td>${(parseFloat(item.Value) / parseFloat(total.Value) * 100).toFixed(1)}%</td>`;
         cols += `<td>${item.Value}</td>`;
-        cols += `<td><span class="${item.Profit >= 0 ? 'text-danger' : 'text-success'}">${item.Profit}</span></td>`;
         if (item.Comment)
           cols += `<td>${item.Comment}</td>`;
         rows += `<tr>${cols}</tr>`;
@@ -120,13 +170,13 @@
       return `<table class="table hover">${th}${rows}</table>`;
     }
 
-    function createCav(cavid,cavHeight,color, total, list, groupby) {
+    function createCav(cavid, cavHeight, color, total, list, groupby) {
       let canvas = document.getElementById(cavid);
       let ctx = canvas.getContext('2d');
       //console.log(cavHeight);
       ctx.canvas.height = cavHeight;
       ctx.font = '16px serial';
-      
+
       // 分组坐标数据
       for (var i = 0, len = list.length; i < len; i++) {
         let item = list[i];

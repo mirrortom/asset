@@ -99,13 +99,13 @@ namespace AssetInfo.Help
         }
 
         /// <summary>
-        /// 指示一个字符串是否为2位小数,或者正数 (d | d.dd),可用于金额
+        /// 指示一个字符串是否为1~3位小数,或者正数 (d | d.d | d.dd | d.ddd),可用于金额
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
         public static bool IsMoney(string str)
         {
-            string rege = @"^[0-9]+([.]{1}[0-9]{1,2})?$";
+            string rege = @"^[0-9]+([.]{1}[0-9]{1,3})?$";
             return Regex.IsMatch(str, rege);
         }
     }

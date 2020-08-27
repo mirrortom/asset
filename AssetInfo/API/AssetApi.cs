@@ -110,7 +110,8 @@ namespace AssetInfo
                 return;
             }
             // 字段
-            var redata = data.Select(o => new {
+            var redata = data.Select(o => new
+            {
                 o.Title,
                 o.Id
             });
@@ -136,19 +137,45 @@ namespace AssetInfo
             List<AssetM> byExcOrg = AssetBll.ValueTotalByExcOrg();
             // 资产类型
             List<AssetM> byKind = AssetBll.ValueTotalByKind();
+            // 近30更新日总值
+            List<AssetM> lasttotal30 = AssetBll.Last30TotalVal();
             var redata = new
             {
                 data.Value,
-                data.Profit,
                 byRisk = data.Value == 0 ? null : byRisk,
                 byExcOrg = byExcOrg == null ? null :
-                SerializeHelp.ObjectsToDicts(byExcOrg, nameof(AssetM.ExcOrg), nameof(AssetM.Value), nameof(AssetM.Profit)),
-                byKind = byKind==null ? null :
-                SerializeHelp.ObjectsToDicts(byKind, nameof(AssetM.Kind), nameof(AssetM.Value), nameof(AssetM.Profit)),
+                SerializeHelp.ObjectsToDicts(byExcOrg, nameof(AssetM.ExcOrg), nameof(AssetM.Value)),
+                byKind = byKind == null ? null :
+                SerializeHelp.ObjectsToDicts(byKind, nameof(AssetM.Kind), nameof(AssetM.Value)),
+                lasttotal30= lasttotal30==null?null:
+                SerializeHelp.ObjectsToDicts(lasttotal30, nameof(AssetM.Value), nameof(AssetM.TotalDate)),
                 errcode = data.ErrorCode
             };
             await this.Json(redata);
         }
+
+        /// <summary>
+        /// 总资产更新
+        /// </summary>
+        /// <returns></returns>
+        [HTTPPOST]
+        public async Task TotalUp()
+        {
+            AssetM data = AssetBll.TotalUp();
+            if (data.ErrorCode >= 300)
+            {
+                await this.Json(new { errcode = data.ErrorCode, errmsg = data.ErrorMsg });
+                return;
+            }
+            var redata = new
+            {
+                date = data.TotalDate,
+                time = data.Ctime.ToString("yyyy/MM/dd HH:mm:ss"),
+                errcode = data.ErrorCode
+            };
+            await this.Json(redata);
+        }
+
         private IEnumerable<object> ToObjectList(IEnumerable<AssetM> data)
         {
             var redata = data.Select(o => new

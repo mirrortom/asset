@@ -107,6 +107,9 @@
         add(thisBtn);
     });
     function add(thisobj) {
+        if ($ui.isBtnLoading(thisobj)) {
+            return;
+        }
         $('#errinfobox').html('');
         // valdate
         let inputs = $('#keyvalform input[name]');
@@ -114,7 +117,6 @@
             if (!$.formCheck(inputs[i]))
                 return;
         }
-        $ui.isBtnLoading(thisobj);
         //
         let para = $.formJson($('#keyvalform')[0]);
         post(cfg.ApiKVAdd, para)
