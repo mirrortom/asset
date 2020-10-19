@@ -407,7 +407,7 @@ ON kv.code=s.kind";
         /// <returns></returns>
         public static List<AssetM> Last30TotalVal()
         {
-            string sql = @"SELECT TOP 30 value,totaldate FROM totalday ORDER BY totaldate DESC";
+            string sql = @"SELECT TOP 31 value,totaldate FROM totalday ORDER BY totaldate DESC";
             SQLServer db = new SQLServer();
             var data = db.ExecuteQuery<AssetM>(sql);
             if (data == null)

@@ -4,22 +4,26 @@
     let get = win.ns.get;
     let cfg = win.ns.cfg;
     let page = win.ns.page;
+    let msg = win.msgshow('#msginfobox');
 
+    //
+    chgTitle();
     list();
     // table data
     function list() {
         let ctgy = $('#keyvalCtgy').val();
         post(cfg.ApiKVList, { category: ctgy })
             .then(data => {
+                $('#keyvallist').empty();
                 if (data.errcode == 200) {
                     createTable(data.list);
                 } else if (data.errmsg) {
-                    $('#keyvallist').html(`<p class="text-warning">${data.errmsg}</p>`);
+                    msg.info(data.errmsg)
                 } else
-                    throw new Error(data);
+                    throw new Error('服务器异常!');
             })
             .catch(err => {
-                $('#keyvallist').html(`<p class="text-danger">${err.message}</p>`);
+                msg.err(err.message);
             });
     }
     function createTable(data) {
@@ -65,6 +69,7 @@
             let kvcode = $(item).prop('kvcode');
             update(kvcode);
         });
+
     }
 
     // 排序操作 kvcode:要重新排序的kvcode,dir:0=向前,1=向后
@@ -107,36 +112,51 @@
         add(thisBtn);
     });
     function add(thisobj) {
+        msg.clear();
+        // valdate
+        let para = formCheck();
+        if (para == false)
+            return;
         if ($ui.isBtnLoading(thisobj)) {
             return;
         }
-        $('#errinfobox').html('');
-        // valdate
-        let inputs = $('#keyvalform input[name]');
-        for (var i = 0, len = inputs.length; i < len; i++) {
-            if (!$.formCheck(inputs[i]))
-                return;
-        }
         //
-        let para = $.formJson($('#keyvalform')[0]);
         post(cfg.ApiKVAdd, para)
             .then(data => {
                 if (data.errcode == 200) {
-                    $('#errinfobox').html('成功!');
-                    $('#keyvalform input[type=text]').val('');
+                    msg.ok('添加完成.');
+                    resetForm();
                     // 刷新表格
                     list();
                 } else if (data.errmsg) {
-                    $('#errinfobox').html(data.errmsg);
+                    msg.err(data.errmsg);
                 } else
                     throw new Error(data);
                 $ui.clsBtnLoading(thisobj, 500);
             })
             .catch(err => {
-                $('#errinfobox').html(err.message);
+                $('#msginfobox').html(err.message);
                 $ui.clsBtnLoading(thisobj, 500);
             });
     }
+
+    function formCheck() {
+        let inputs = $('#keyvalform input[name]');
+        for (var i = 0, len = inputs.length; i < len; i++) {
+            if (!$.formCheck(inputs[i]))
+                return false;
+        }
+        if (!$('#keyvalCtgy').val()) {
+            msg.warn('选项分组id错误!');
+            return false;
+        }
+        let para = $.formJson($('#keyvalform')[0]);
+        return para;
+    }
+    // 取消
+    $('#keyvalclearBtn').click(thisBtn => {
+        resetForm();
+    });
 
     // 修改
     function update(code) {
@@ -148,13 +168,29 @@
                     $('#keyvalform input[name]').each(o => {
                         o.value = data.item[o.name];
                     });
+                    chgTitle(1);
                 } else if (data.errmsg) {
-                    $('#errinfobox').html('更新出错: '+data.errmsg);
+                    msg.err('更新出错: ' + data.errmsg)
                 } else
-                    throw new Error(data);
+                    throw new Error('服务器异常!');
             })
             .catch(err => {
-                $('#errinfobox').html('更新发生异常: '+err.message);
+                $('#msginfobox').html('更新发生异常: ' + err.message);
             });
+    }
+    // 重置表单
+    function resetForm() {
+        chgTitle();
+        $('#keyvalform input[name=Title]').val('');
+        $('#keyvalform input[name=Comment]').val('');
+        $('#keyvalform input[name=Code]').val('');
+    }
+    // 新增/修改 标题切换 1=修改,其它=新增
+    function chgTitle(type) {
+        if (type == 1) {
+            $('#keyvalTitle').text('🖍 更新').addClass('text-danger');
+        } else {
+            $('#keyvalTitle').text('\u271A 新增').removeClass('text-danger');
+        }
     }
 })(window);

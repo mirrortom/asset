@@ -41,7 +41,11 @@
     let get = win.ns.get;
     let cfg = win.ns.cfg;
     let router = win.ns.router;
-
+    // canvas style
+    let bg_c = '#ececec80';
+    let red_c = '#dc3545dd';
+    let green_c = '#28a745dd';
+    let font_c = 'gray';
     //===========
     // page init
     //===========
@@ -105,9 +109,12 @@
     // 30天总值变化图
     function lastTotal30(list) {
       //console.log(list)
+      let valRangeLen = list.length;
+      if (valRangeLen > 30)
+        valRangeLen = 30;
       // 求最大总值,canvas高度(显示柱子的区域高度)/最大值,得到显示比例 1像素 = x金额
       let maxVal = list[0].Value, maxItem = list[0], minVal = list[0].Value, minItem = list[0];
-      for (var i = 0, len = list.length; i < len; i++) {
+      for (var i = 0, len = valRangeLen; i < len; i++) {
         if (maxVal < list[i].Value) {
           maxVal = list[i].Value;
           maxItem = list[i];
@@ -118,43 +125,68 @@
         }
       }
       // init canvas
+      let ctx = lastTotal30_InitCanvas();
+      // darw
+      // 比例. canvas画布上面和下面各留出25px,显示日期和最大最小值
+      let scale = (ctx.canvas.height - 65) / maxVal;
+      let y = 170;// 起底高度
+      let w = 12;// 柱子宽
+      let startDataIndex = list.length > 30 ? 29: list.length - 1;
+      for (var i = startDataIndex, j = 0; i >= 0; i--, j++) {
+        let item = list[i];
+        let x = j * 40 + 20;// 间隔40
+        let h = -item.Value * scale;// 高度,负值是向上画
+        // 前一天变化值
+        let incmt = i < list.length - 1 ? item.Value - list[i + 1].Value : 0;
+        // 柱子颜色 比前一天多为红色,少为绿色
+        ctx.beginPath();
+        ctx.fillStyle = incmt >= 0 ? red_c : green_c;
+        ctx.fillRect(x, y, w, h);
+        // 画日期
+        ctx.fillStyle = font_c;
+        let date = item.TotalDate + '';
+        ctx.fillText(date.substr(0, 4), x, y + 15);
+        ctx.fillText(date.substr(4, 4), x, y + 25);
+        // 画总值,前一天差值
+        lastTotal30_Value(ctx, x, item.Value, incmt);
+      }
+      lastTotal30_MaxMin(ctx, minItem, maxItem);
+    }
+    function lastTotal30_InitCanvas() {
       let canvas = document.getElementById('total30day_cav');
       let ctx = canvas.getContext('2d');
-      ctx.canvas.width = 1040;
+      ctx.canvas.width = 1200;
       ctx.canvas.height = 200;
       ctx.font = '12px serial';
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#efefef';
+      ctx.fillStyle = bg_c;
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      // darw
-      // 比例. canvas画布上面和下面各留出25px,显示日期和最大最小值
-      let scale = (ctx.canvas.height - 50) / maxVal;
-      for (var i = list.length - 1, j = 0; i >= 0; i--, j++) {
-        let item = list[i];
-        let x = j * 33 + 20;// 间隔32
-        let y = 175;// 起底高度
-        let w = 9;// 柱子宽
-        let h = -item.Value * scale;// 高度,负值是向上画
-        // 柱子颜色 最大最小颜色不同
-        ctx.beginPath();
-        ctx.fillStyle = 'RGBA(64,128,192,.6)';
-        if (item.TotalDate == maxItem.TotalDate)
-          ctx.fillStyle = 'red';
-        else if (item.TotalDate == minItem.TotalDate)
-          ctx.fillStyle = 'green';
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = 'gray';
-        let date = item.TotalDate + '';
-        ctx.fillText(date.substr(0, 4), x, y + 12);
-        ctx.fillText(date.substr(4, 4), x, y + 22);
-      }
+      return ctx;
+    }
+    function lastTotal30_MaxMin(ctx, minItem, maxItem) {
       // 最大最小值
       ctx.beginPath();
       ctx.fillStyle = 'red';
-      ctx.fillText(`最高 ￥${maxItem.Value} 日期 ${maxItem.TotalDate}`, 382, 15);
+      ctx.fillText(`最高 ￥${maxItem.Value} 日期 ${maxItem.TotalDate}`, 382, 20);
       ctx.beginPath();
       ctx.fillStyle = 'green';
-      ctx.fillText(`最低 ￥${minItem.Value} 日期 ${minItem.TotalDate}`, 618, 15);
+      ctx.fillText(`最低 ￥${minItem.Value} 日期 ${minItem.TotalDate}`, 618, 20);
+    }
+    function lastTotal30_Value(ctx, xStart, val, increment) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.font = '12px serial';
+      let valStr = val + '';
+      for (var i = 0, len = valStr.length; i < len; i++) {
+        ctx.fillText(valStr[i], xStart - 8, 60 + i * 12);
+      }
+      ctx.beginPath();
+      ctx.fillStyle = 'white';
+      let incmtStr =Math.abs(increment.toFixed(3)) + '';
+      for (var i = 0, len = incmtStr.length; i < len; i++) {
+        ctx.fillText(incmtStr[i], xStart+6, 60 + i * 12);
+      }
+      ctx.restore();
     }
     function createTable(total, list, th, groupby) {
       let rows = '';
@@ -185,14 +217,13 @@
 
         //
         ctx.beginPath();
-        ctx.fillStyle = '#efefef';
+        ctx.fillStyle = bg_c;
         ctx.fillRect(0, i * 30 + 32, 300, 22);
 
         ctx.beginPath();
         ctx.fillStyle = color;
         ctx.fillRect(0, i * 30 + 32, len, 22);
-      }
-      // 柱子
+      } 
     }
   })(window);
 </script>

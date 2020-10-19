@@ -16,8 +16,8 @@ namespace AssetInfo.Entity
         /// <summary>
         /// 种类名 maxlen=50
         /// </summary>
-        [VNotNull(errMsg ="种类名字不能为空!")]
-        [VStringLength(maxlen = 50,errMsg = "种类名字不超过50字!")]
+        [VNotNull(errMsg ="名字不能为空!")]
+        [VStringLength(maxlen = 50,errMsg = "名字不超过50字!")]
         public string Title;
         /// <summary>
         /// 所属分类

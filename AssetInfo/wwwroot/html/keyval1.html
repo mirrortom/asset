@@ -1,5 +1,5 @@
 ﻿<div class="page">
-  <p class="article-title info">新增/更新</p>
+  <p class="article-title info" id="keyvalTitle"></p>
   <div class="grids" id="keyvalform">
     <label class="input-label bg-gray text-center grid-1">机构名称</label>
     <input class="input-text grid-2" name="Title" type="text" value="" placeholder="请输入资产机构名" vtype="notnull|maxlen" verrmsg="必填项|不超过50个字符" maxlength="50">
@@ -9,9 +9,10 @@
     <input type="hidden" name="Code" value="" />
     <div class="grid-4">
       <a class="btn info mg-l-10" id="keyvaladdBtn">提交</a>
-      <strong class="mg-l-20"><span class="text-danger" id="errinfobox"></span></strong>
+      <a class="btn mg-l-10" id="keyvalclearBtn">取消</a>
     </div>
   </div>
+  <div class="mg-tb-10" id="msginfobox"></div>
   <p class="article-title warning">搜索</p>
   <div id="keyvallist"></div>
 </div>
